@@ -142,6 +142,178 @@ Enhances RLM with structured knowledge graph extraction for relationship-heavy d
 | "Find all cross-references between sections" | RLM + Graph |
 | Multi-party contract with dependencies | RLM + Graph |
 
+## Example Prompts by Document Type
+
+Below are example prompts you can use to test the application with different types of documents. Each example includes the document type, sample questions, and the recommended analysis mode.
+
+### Legal Contracts
+
+**Document**: Service Agreement, Master Service Agreement, Purchase Agreement, License Agreement
+
+**Questions**:
+- Base Mode:
+  - "What is the effective date of this agreement?"
+  - "Who are the parties to this contract?"
+
+- Retrieval Mode:
+  - "What is the termination clause?"
+  - "What are the payment terms?"
+  - "What warranties are provided?"
+
+- RLM Mode:
+  - "Summarize all obligations for both parties"
+  - "What are all the liability limitations throughout the contract?"
+  - "List all conditions under which either party can terminate"
+  - "What are all the penalties and remedies mentioned in this agreement?"
+
+- RLM + Graph Mode:
+  - "Who has obligations to whom, and what are they?"
+  - "Map all parties involved and their relationships"
+  - "What obligations depend on specific conditions being met?"
+  - "Which clauses reference or depend on other clauses?"
+  - "Create a complete map of all parties, their rights, and obligations"
+
+### Technical Documentation
+
+**Document**: API Documentation, Software Architecture Document, System Design Specification
+
+**Questions**:
+- Base Mode:
+  - "What is the main purpose of this system?"
+  - "Which version is this documentation for?"
+
+- Retrieval Mode:
+  - "How do I authenticate with the API?"
+  - "What is the rate limiting policy?"
+  - "What does the /users endpoint do?"
+
+- RLM Mode:
+  - "List all available API endpoints and their functions"
+  - "What are all the error codes and their meanings?"
+  - "Summarize the security requirements across all endpoints"
+  - "What are all the dependencies and their versions?"
+
+- RLM + Graph Mode:
+  - "Map the relationships between all system components"
+  - "Which services depend on which other services?"
+  - "Show all data flows between components"
+  - "What are all the external integrations and how do they connect?"
+
+### Financial Reports
+
+**Document**: Annual Report, Quarterly Earnings Report, Financial Statement
+
+**Questions**:
+- Base Mode:
+  - "What is the total revenue for this period?"
+  - "What is the company name in this report?"
+
+- Retrieval Mode:
+  - "What were the operating expenses?"
+  - "What does the CEO letter say about future outlook?"
+  - "What are the risk factors mentioned?"
+
+- RLM Mode:
+  - "Summarize all revenue streams mentioned in the report"
+  - "List all risks and challenges identified across the entire document"
+  - "What are all the growth initiatives mentioned?"
+  - "Compare year-over-year changes across all metrics"
+
+- RLM + Graph Mode:
+  - "Map all business segments and their financial relationships"
+  - "Which segments depend on which markets or products?"
+  - "Show all subsidiaries and their parent-child relationships"
+  - "What are all the partnerships and how do they relate to revenue?"
+
+### Research Papers
+
+**Document**: Academic Paper, Research Study, Technical White Paper
+
+**Questions**:
+- Base Mode:
+  - "What is the title and author of this paper?"
+  - "When was this published?"
+
+- Retrieval Mode:
+  - "What methodology was used in this study?"
+  - "What were the main findings?"
+  - "What is the conclusion?"
+
+- RLM Mode:
+  - "Summarize all experiments and their results"
+  - "What are all the limitations mentioned throughout the paper?"
+  - "List all hypotheses tested and their outcomes"
+  - "Compare all data points across different experimental conditions"
+
+- RLM + Graph Mode:
+  - "Map all variables and their relationships tested in the study"
+  - "Which outcomes depend on which conditions?"
+  - "Show all citations and how they relate to different claims"
+  - "What are all the causal relationships identified?"
+
+### Compliance & Policy Documents
+
+**Document**: Privacy Policy, Terms of Service, GDPR Compliance Document, SOC 2 Report
+
+**Questions**:
+- Base Mode:
+  - "What company is this policy for?"
+  - "When was this policy last updated?"
+
+- Retrieval Mode:
+  - "How is user data collected?"
+  - "What are the cookie policies?"
+  - "How can users delete their data?"
+
+- RLM Mode:
+  - "List all types of personal data collected and how they're used"
+  - "What are all the user rights mentioned in this document?"
+  - "Summarize all security measures described"
+  - "What are all the third parties that receive user data?"
+
+- RLM + Graph Mode:
+  - "Map all data flows: what data goes where and to whom"
+  - "Which processing activities depend on which legal bases?"
+  - "Show all third-party relationships and data sharing arrangements"
+  - "What are all the user rights and which data categories do they apply to?"
+
+### Multi-Document Analysis
+
+**Documents**: Multiple related contracts, project documentation set, compliance package
+
+**Questions**:
+- RLM Mode:
+  - "What are the common obligations across all these contracts?"
+  - "Identify any conflicting terms between these documents"
+  - "Summarize the timeline of deliverables across all project docs"
+
+- RLM + Graph Mode:
+  - "Map all parties across all contracts and show their relationships"
+  - "Which obligations in one contract relate to obligations in others?"
+  - "Show all cross-references between documents"
+  - "Create a unified view of all deadlines and their dependencies"
+
+### Medical/Clinical Documents
+
+**Document**: Clinical Trial Protocol, Patient Records, Medical Guidelines
+
+**Questions**:
+- Retrieval Mode:
+  - "What are the inclusion criteria?"
+  - "What is the primary endpoint?"
+  - "What adverse events are monitored?"
+
+- RLM Mode:
+  - "Summarize all safety monitoring procedures"
+  - "List all dosing schedules and modifications"
+  - "What are all the contraindications mentioned?"
+
+- RLM + Graph Mode:
+  - "Map all patient cohorts and their treatment paths"
+  - "Which procedures depend on which test results?"
+  - "Show all medication interactions and dependencies"
+  - "What are all the escalation criteria and resulting actions?"
+
 ## Key Implementation Details
 
 ### Chunking Strategy

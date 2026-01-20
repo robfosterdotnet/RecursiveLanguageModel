@@ -1,6 +1,6 @@
-import { chatCompletion } from "@/lib/azure";
-import { buildChunks } from "@/lib/chunking";
-import { buildGraph, summarizeGraph } from "@/lib/graph";
+import { getRootDeployment, getSubDeployment } from "@/config/env";
+import { buildChunks } from "@/lib/analysis/chunking";
+import { buildGraph, summarizeGraph } from "@/lib/analysis/graph";
 import {
   GRAPH_ROOT_PROMPT,
   GRAPH_SUB_PROMPT,
@@ -8,8 +8,8 @@ import {
   REWRITE_PROMPT,
   ROOT_PROMPT,
   SUB_PROMPT,
-} from "@/lib/prompts";
-import { rankChunks } from "@/lib/retrieval";
+} from "@/lib/analysis/prompts";
+import { rankChunks } from "@/lib/analysis/retrieval";
 import type {
   AnalyzeRequest,
   AnalyzeResponse,
@@ -20,7 +20,8 @@ import type {
   KnowledgeGraph,
   RelationType,
   SubFinding,
-} from "@/lib/types";
+} from "@/lib/analysis/types";
+import { chatCompletion } from "@/lib/llm/azure";
 
 export const runtime = "nodejs";
 
@@ -249,15 +250,8 @@ export async function POST(request: Request) {
         const mode = body.mode;
         const options = { ...DEFAULT_OPTIONS, ...body.options };
 
-        const rootDeployment =
-          process.env.AZURE_OPENAI_DEPLOYMENT_ROOT ??
-          process.env.AZURE_OPENAI_DEPLOYMENT;
-        const subDeployment =
-          process.env.AZURE_OPENAI_DEPLOYMENT_SUB ?? "gpt-5-nano";
-
-        if (!rootDeployment) {
-          throw new Error("Missing AZURE_OPENAI_DEPLOYMENT.");
-        }
+        const rootDeployment = getRootDeployment("Missing AZURE_OPENAI_DEPLOYMENT.");
+        const subDeployment = getSubDeployment();
 
         log(`Initializing ${mode.toUpperCase()} analysis...`, "info");
         log(`Processing ${documents.length} document(s)`, "dim");
@@ -357,12 +351,18 @@ export async function POST(request: Request) {
           const chunks = buildChunks(documents, { chunkSize: options.chunkSize });
           log(`Created ${chunks.length} chunks`, "success");
 
-          const maxSubcalls = Math.min(options.maxSubcalls, chunks.length);
+          // In comprehensive mode, process ALL chunks
+          const maxSubcalls = options.comprehensiveMode
+            ? chunks.length
+            : Math.min(options.maxSubcalls, chunks.length);
           const concurrency = options.concurrency ?? 6;
           const findings: SubFinding[] = [];
           let usage = undefined as AnalyzeResponse["usage"];
 
-          log(`Starting recursive analysis (${maxSubcalls} chunks, ${concurrency} concurrent)...`, "info");
+          log(
+            `Starting recursive analysis (${maxSubcalls} chunks, ${concurrency} concurrent)${options.comprehensiveMode ? " - COMPREHENSIVE MODE" : ""}...`,
+            "info"
+          );
 
           const chunksToProcess = chunks.slice(0, maxSubcalls);
           let completed = 0;
@@ -397,9 +397,11 @@ export async function POST(request: Request) {
               completed += 1;
               usage = addUsage(usage, subResult.usage);
               const finding = parseSubFinding(subResult.content, chunk);
-              if (finding.relevant) {
+
+              // In comprehensive mode, include ALL findings (even if marked as not relevant)
+              if (options.comprehensiveMode || finding.relevant) {
                 findings.push(finding);
-                log(`  ✓ Found relevant content in ${chunk.id}`, "success");
+                log(`  ✓ Found ${finding.relevant ? "relevant" : "additional"} content in ${chunk.id}`, "success");
               }
             }
 
@@ -459,13 +461,19 @@ export async function POST(request: Request) {
           const chunks = buildChunks(documents, { chunkSize: options.chunkSize });
           log(`Created ${chunks.length} chunks`, "success");
 
-          const maxSubcalls = Math.min(options.maxSubcalls, chunks.length);
+          // In comprehensive mode, process ALL chunks
+          const maxSubcalls = options.comprehensiveMode
+            ? chunks.length
+            : Math.min(options.maxSubcalls, chunks.length);
           const concurrency = options.concurrency ?? 6;
           const findings: SubFinding[] = [];
           const extractions: Array<{ chunkId: string; extraction: EntityExtraction }> = [];
           let usage = undefined as AnalyzeResponse["usage"];
 
-          log(`Starting RLM + Graph analysis (${maxSubcalls} chunks, ${concurrency} concurrent)...`, "info");
+          log(
+            `Starting RLM + Graph analysis (${maxSubcalls} chunks, ${concurrency} concurrent)${options.comprehensiveMode ? " - COMPREHENSIVE MODE" : ""}...`,
+            "info"
+          );
 
           const chunksToProcess = chunks.slice(0, maxSubcalls);
           let completed = 0;
@@ -501,9 +509,13 @@ export async function POST(request: Request) {
               usage = addUsage(usage, subResult.usage);
               const graphResult = parseGraphSubResult(subResult.content, chunk);
 
-              if (graphResult.finding.relevant) {
+              // In comprehensive mode, include ALL findings (even if marked as not relevant)
+              if (options.comprehensiveMode || graphResult.finding.relevant) {
                 findings.push(graphResult.finding);
-                log(`  ✓ Found relevant content in ${chunk.id}`, "success");
+                log(
+                  `  ✓ Found ${graphResult.finding.relevant ? "relevant" : "additional"} content in ${chunk.id}`,
+                  "success"
+                );
               }
 
               // Always collect extractions even if finding not relevant

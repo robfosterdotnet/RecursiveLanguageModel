@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RLM - Medium Article Visual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .card {
+      width: 800px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 48px;
+      backdrop-filter: blur(10px);
+      color: #ffffff;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-size: 36px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    /* Architecture Flow */
+    .architecture-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .step {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 16px 12px;
+      text-align: center;
+      position: relative;
+    }
+
+    .step::after {
+      content: '→';
+      position: absolute;
+      right: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+      color: #6366f1;
+      font-weight: bold;
+    }
+
+    .step:last-child::after {
+      display: none;
+    }
+
+    .step-num {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      margin: 0 auto 10px;
+    }
+
+    .step-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .step-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 10px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    /* Parallel Processing Visual */
+    .parallel-section {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .parallel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .parallel-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #a5b4fc;
+    }
+
+    .parallel-badge {
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .chunk-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    .chunk {
+      aspect-ratio: 1;
+      background: rgba(100, 116, 139, 0.3);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 600;
+      color: #94a3b8;
+    }
+
+    .chunk.relevant {
+      background: rgba(34, 197, 94, 0.4);
+      color: #bbf7d0;
+    }
+
+    /* Benefits */
+    .benefits {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .benefit {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .benefit-icon {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .benefit-text {
+      font-size: 11px;
+      color: #86efac;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    /* Stats row */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .stat {
+      text-align: center;
+      padding: 12px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .author {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <header class="header">
+      <div class="badge">Document AI Architecture</div>
+      <h1 class="title">Recursive Language Models</h1>
+      <p class="subtitle">Divide-and-conquer LLM architecture for large document analysis</p>
+    </header>
+
+    <div class="architecture-label">5-Step Pipeline</div>
+    <div class="flow">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-icon">📄</div>
+        <div class="step-title">Documents</div>
+        <div class="step-desc">PDF, DOCX, contracts</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-icon">✂️</div>
+        <div class="step-title">Chunk</div>
+        <div class="step-desc">~1800 char splits</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-icon">🔄</div>
+        <div class="step-title">Sub-calls</div>
+        <div class="step-desc">24 parallel LLMs</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-icon">🎯</div>
+        <div class="step-title">Aggregate</div>
+        <div class="step-desc">Root synthesis</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-icon">✍️</div>
+        <div class="step-title">Rewrite</div>
+        <div class="step-desc">Clear output</div>
+      </div>
+    </div>
+
+    <div class="parallel-section">
+      <div class="parallel-header">
+        <div class="parallel-title">Parallel Chunk Processing</div>
+        <div class="parallel-badge">⚡ FULL ATTENTION PER CHUNK</div>
+      </div>
+      <div class="chunk-grid">
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+        <div class="chunk"></div>
+        <div class="chunk"></div>
+        <div class="chunk relevant">✓</div>
+      </div>
+    </div>
+
+    <div class="benefits">
+      <div class="benefit">
+        <div class="benefit-icon">🎯</div>
+        <div class="benefit-text">Zero context rot</div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon">📍</div>
+        <div class="benefit-text">Citations preserved</div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon">🚀</div>
+        <div class="benefit-text">Parallel execution</div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-icon">💰</div>
+        <div class="benefit-text">Cost efficient</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">1800</div>
+        <div class="stat-label">Chars/chunk</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">24</div>
+        <div class="stat-label">Parallel calls</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">~3x</div>
+        <div class="stat-label">Cost for 24x coverage</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0%</div>
+        <div class="stat-label">Attention loss</div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <span class="author">Rob Foster</span> · Open Source · MIT License
+    </footer>
+  </div>
+</body>
+</html>

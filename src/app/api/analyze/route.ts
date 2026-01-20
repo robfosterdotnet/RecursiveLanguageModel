@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { analyze } from "@/lib/analyze";
-import type { AnalyzeRequest } from "@/lib/types";
+import { analyze } from "@/lib/analysis/analyze";
+import type { AnalyzeRequest } from "@/lib/analysis/types";
 
 export const runtime = "nodejs";
 

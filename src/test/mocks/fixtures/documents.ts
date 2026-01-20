@@ -1,4 +1,4 @@
-import type { DocumentInput, Chunk } from "@/lib/types";
+import type { DocumentInput, Chunk } from "@/lib/analysis/types";
 
 // Sample documents for testing
 export const sampleDocuments: DocumentInput[] = [

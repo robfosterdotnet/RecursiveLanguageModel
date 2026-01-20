@@ -1,5 +1,6 @@
 import { AzureOpenAI } from "openai";
 import "@azure/openai/types";
+import { getAzureOpenAIConfig } from "@/config/env";
 
 let client: AzureOpenAI | null = null;
 
@@ -8,21 +9,7 @@ const getClient = () => {
     return client;
   }
 
-  const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-  const apiKey = process.env.AZURE_OPENAI_API_KEY;
-  const apiVersion =
-    process.env.AZURE_OPENAI_API_VERSION ?? process.env.OPENAI_API_VERSION;
-
-  const missing = [];
-  if (!endpoint) missing.push("AZURE_OPENAI_ENDPOINT");
-  if (!apiKey) missing.push("AZURE_OPENAI_API_KEY");
-  if (!apiVersion) missing.push("AZURE_OPENAI_API_VERSION");
-
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing Azure OpenAI configuration: ${missing.join(", ")}.`,
-    );
-  }
+  const { endpoint, apiKey, apiVersion } = getAzureOpenAIConfig();
 
   client = new AzureOpenAI({
     apiKey,

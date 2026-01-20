@@ -5,7 +5,7 @@ import type {
   GraphNode,
   KnowledgeGraph,
   RelationType,
-} from "@/lib/types";
+} from "@/lib/analysis/types";
 
 type ChunkExtraction = {
   chunkId: string;

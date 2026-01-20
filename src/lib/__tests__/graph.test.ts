@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mergeEntities, buildGraph, summarizeGraph } from "@/lib/graph";
-import type { EntityExtraction } from "@/lib/types";
+import { mergeEntities, buildGraph, summarizeGraph } from "@/lib/analysis/graph";
+import type { EntityExtraction } from "@/lib/analysis/types";
 
 describe("graph", () => {
   describe("mergeEntities", () => {

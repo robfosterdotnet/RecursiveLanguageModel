@@ -1,4 +1,4 @@
-import type { Chunk } from "@/lib/types";
+import type { Chunk } from "@/lib/analysis/types";
 
 const tokenize = (text: string) =>
   text

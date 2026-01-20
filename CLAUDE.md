@@ -45,13 +45,14 @@ Frontend → /api/analyze-stream (SSE) → Chunk/Rank → Azure OpenAI → Strea
 
 ### Key Modules
 
-- `src/lib/analyze.ts` - Core analysis orchestration for all four modes
-- `src/lib/azure.ts` - Azure OpenAI client wrapper
-- `src/lib/chunking.ts` - Paragraph-based document chunking
-- `src/lib/retrieval.ts` - BM25-like term frequency ranking
-- `src/lib/graph.ts` - Knowledge graph construction and entity merging
-- `src/lib/prompts.ts` - System prompts for sub-calls, root aggregation, and entity extraction
-- `src/lib/types.ts` - TypeScript types for requests/responses
+- `src/lib/analysis/analyze.ts` - Core analysis orchestration for all four modes
+- `src/lib/llm/azure.ts` - Azure OpenAI client wrapper
+- `src/lib/analysis/chunking.ts` - Paragraph-based document chunking
+- `src/lib/analysis/retrieval.ts` - BM25-like term frequency ranking
+- `src/lib/analysis/graph.ts` - Knowledge graph construction and entity merging
+- `src/lib/analysis/prompts.ts` - System prompts for sub-calls, root aggregation, and entity extraction
+- `src/lib/analysis/types.ts` - TypeScript types for requests/responses
+- `src/config/env.ts` - Environment validation and deployment selection
 
 ### API Routes
 

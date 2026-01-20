@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Context Rot - LinkedIn Post (Short)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .meta {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0a66c2;
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: #333;
+            font-size: 15px;
+        }
+
+        strong {
+            font-weight: 600;
+            color: #000;
+        }
+
+        .hook {
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-bottom: 20px;
+            color: #000;
+        }
+
+        .list-item {
+            margin-left: 20px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .list-item::before {
+            content: "→ ";
+            color: #0a66c2;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .emphasis {
+            font-weight: 600;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .question {
+            font-style: italic;
+            color: #555;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+
+        .hashtags {
+            color: #0a66c2;
+            font-weight: 500;
+            margin-top: 30px;
+        }
+
+        .instructions {
+            background: #f0f8ff;
+            border-left: 4px solid #0a66c2;
+            padding: 20px;
+            margin-top: 40px;
+            border-radius: 4px;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #0a66c2;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background: #ddd;
+            margin: 25px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="meta">
+            <strong>~250 words | Best for initial engagement</strong>
+        </div>
+
+        <p class="hook">Your 128K context window is lying to you.</p>
+
+        <p>Here's what's actually happening inside.</p>
+
+        <p>I built a legal contract analyzer and kept hitting the same wall:</p>
+
+        <p>Information in the MIDDLE of long contexts gets ignored.</p>
+
+        <p>Stanford calls it "lost in the middle."<br>
+        I call it context rot.</p>
+
+        <p class="emphasis">The fix isn't bigger context windows.<br>
+        It's smarter architecture.</p>
+
+        <hr>
+
+        <p><strong>Recursive Language Models (RLM):</strong></p>
+
+        <div class="list-item">Chunk documents into ~1800 char segments</div>
+        <div class="list-item">Each chunk gets its OWN LLM call (full attention, zero decay)</div>
+        <div class="list-item">Sub-model returns: relevant? summary? citations?</div>
+        <div class="list-item">Root model synthesizes all findings</div>
+        <div class="list-item">Rewrite pass for clarity</div>
+
+        <p><strong>Why this works:</strong></p>
+
+        <p>There's no "middle" to get lost in when your context is 1800 characters.</p>
+
+        <p>The root model never sees raw text—just distilled findings.</p>
+
+        <hr>
+
+        <p>I added a knowledge graph layer:</p>
+
+        <div class="list-item">Extract entities (parties, dates, amounts, clauses)</div>
+        <div class="list-item">Extract relationships (has_obligation, depends_on, references)</div>
+        <div class="list-item">Merge duplicates across chunks (Jaccard similarity)</div>
+        <div class="list-item">Feed graph summary to root model</div>
+
+        <p><strong>Now you can ask:</strong></p>
+
+        <p class="question">"What obligations does Party A have that depend on conditions controlled by Party B?"</p>
+
+        <p>Across a 100-page contract. With citations.</p>
+
+        <hr>
+
+        <p>Everyone's chasing 1M token windows.</p>
+
+        <p class="emphasis">I think that's backwards.</p>
+
+        <p>Bigger windows = more diluted attention.</p>
+
+        <p class="emphasis">The answer is decomposition, not expansion.</p>
+
+        <p>Open sourced the full implementation.</p>
+
+        <p>Link in comments.</p>
+
+        <p>What's your approach to long-document analysis?</p>
+
+        <p class="hashtags">#AI #LegalTech #LLM #SoftwareArchitecture #OpenSource</p>
+
+        <div class="instructions">
+            <h3>Posting Instructions</h3>
+            <ol>
+                <li>Copy text above (between the meta and instructions sections)</li>
+                <li>Post WITHOUT the GitHub link in the body</li>
+                <li>Immediately comment with: <code>Repo: https://github.com/robfosterdotnet/RecursiveLanguageModel</code></li>
+                <li>Attach the infographic screenshot (see <code>rlm-infographic.html</code>)</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

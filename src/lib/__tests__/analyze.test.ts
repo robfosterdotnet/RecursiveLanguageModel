@@ -50,7 +50,7 @@ vi.mock("openai", () => {
 });
 
 // Import after mocking
-import { analyze } from "@/lib/analyze";
+import { analyze } from "@/lib/analysis/analyze";
 
 describe("analyze", () => {
   beforeEach(() => {
@@ -214,7 +214,7 @@ describe("analyze", () => {
         },
       }));
 
-      const { analyze: freshAnalyze } = await import("@/lib/analyze");
+      const { analyze: freshAnalyze } = await import("@/lib/analysis/analyze");
 
       await expect(
         freshAnalyze({

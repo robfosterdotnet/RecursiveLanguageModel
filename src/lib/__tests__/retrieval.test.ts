@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { rankChunks } from "@/lib/retrieval";
+import { rankChunks } from "@/lib/analysis/retrieval";
 import { sampleChunks } from "@/test/mocks/fixtures/documents";
 
 describe("rankChunks", () => {

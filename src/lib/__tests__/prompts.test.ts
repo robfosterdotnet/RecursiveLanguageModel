@@ -7,7 +7,7 @@ import {
   ENTITY_EXTRACTION_PROMPT,
   GRAPH_SUB_PROMPT,
   GRAPH_ROOT_PROMPT,
-} from "@/lib/prompts";
+} from "@/lib/analysis/prompts";
 
 describe("prompts", () => {
   describe("ROOT_PROMPT", () => {

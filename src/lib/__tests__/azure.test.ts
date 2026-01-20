@@ -17,7 +17,7 @@ vi.mock("openai", () => {
 });
 
 // Import after mocking
-import { chatCompletion } from "@/lib/azure";
+import { chatCompletion } from "@/lib/llm/azure";
 
 describe("chatCompletion", () => {
   beforeEach(() => {
@@ -114,7 +114,7 @@ describe("chatCompletion", () => {
         },
       }));
 
-      const { chatCompletion: freshChatCompletion } = await import("@/lib/azure");
+      const { chatCompletion: freshChatCompletion } = await import("@/lib/llm/azure");
 
       await expect(
         freshChatCompletion({

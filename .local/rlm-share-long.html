@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RLM - Long Article Visual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .card {
+      width: 1000px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 48px;
+      backdrop-filter: blur(10px);
+      color: #ffffff;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-size: 40px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    /* Two column layout */
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    /* Architecture side */
+    .architecture {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .flow-vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 12px 16px;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .step-desc {
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    /* Knowledge Graph side */
+    .graph-section {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .graph-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .graph-icon {
+      width: 32px;
+      height: 32px;
+      background: rgba(16, 185, 129, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .graph-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #6ee7b7;
+    }
+
+    .entity-row, .relation-row {
+      margin-bottom: 16px;
+    }
+
+    .type-label {
+      font-size: 10px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      background: rgba(255,255,255,0.1);
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+
+    .tag.entity { border-left: 2px solid #6ee7b7; }
+    .tag.relation { border-left: 2px solid #67e8f9; }
+
+    .graph-visual {
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+      padding: 16px;
+      height: 120px;
+      position: relative;
+    }
+
+    .graph-node {
+      position: absolute;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .node-party {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+    }
+
+    .node-obligation {
+      width: 45px;
+      height: 45px;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    }
+
+    .node-date {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    }
+
+    /* Mode Comparison */
+    .modes-section {
+      margin-bottom: 20px;
+    }
+
+    .modes-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .mode-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .mode-card.recommended {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .mode-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+
+    .mode-desc {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+
+    .mode-pro, .mode-con {
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
+    .mode-pro { color: #86efac; }
+    .mode-con { color: #fca5a5; }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* Contrarian */
+    .contrarian {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .contrarian-icon {
+      font-size: 32px;
+    }
+
+    .contrarian-text {
+      font-size: 13px;
+      color: #fef3c7;
+      line-height: 1.5;
+    }
+
+    .contrarian-text strong {
+      color: #fcd34d;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .author {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <header class="header">
+      <div class="badge">Complete Architecture Guide</div>
+      <h1 class="title">Recursive Language Models</h1>
+      <p class="subtitle">Solving context rot with divide-and-conquer LLM architecture + knowledge graphs</p>
+    </header>
+
+    <div class="main-content">
+      <!-- Left: Architecture -->
+      <div class="architecture">
+        <div class="section-label">RLM Pipeline</div>
+        <div class="flow-vertical">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-icon">📄</div>
+            <div class="step-content">
+              <div class="step-title">Ingest Documents</div>
+              <div class="step-desc">PDF, DOCX, contracts, legal documents</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-icon">✂️</div>
+            <div class="step-content">
+              <div class="step-title">Paragraph Chunking</div>
+              <div class="step-desc">~1800 chars, preserves boundaries</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-icon">🔄</div>
+            <div class="step-content">
+              <div class="step-title">Parallel Sub-calls</div>
+              <div class="step-desc">24 concurrent LLM calls with full attention</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-icon">🎯</div>
+            <div class="step-content">
+              <div class="step-title">Root Aggregation</div>
+              <div class="step-desc">Synthesize filtered findings + citations</div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-icon">✍️</div>
+            <div class="step-content">
+              <div class="step-title">Rewrite Pass</div>
+              <div class="step-desc">Legal precision + plain language output</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Knowledge Graph -->
+      <div class="graph-section">
+        <div class="graph-header">
+          <div class="graph-icon">🕸️</div>
+          <div class="graph-title">Knowledge Graph Mode</div>
+        </div>
+
+        <div class="entity-row">
+          <div class="type-label">Entity Types</div>
+          <div class="tag-list">
+            <span class="tag entity">party</span>
+            <span class="tag entity">date</span>
+            <span class="tag entity">amount</span>
+            <span class="tag entity">obligation</span>
+            <span class="tag entity">right</span>
+            <span class="tag entity">condition</span>
+          </div>
+        </div>
+
+        <div class="relation-row">
+          <div class="type-label">Relationships</div>
+          <div class="tag-list">
+            <span class="tag relation">has_obligation</span>
+            <span class="tag relation">depends_on</span>
+            <span class="tag relation">references</span>
+            <span class="tag relation">effective_on</span>
+          </div>
+        </div>
+
+        <div class="graph-visual">
+          <svg style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;">
+            <line x1="75" y1="60" x2="180" y2="45" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+            <line x1="280" y1="60" x2="180" y2="45" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+            <line x1="180" y1="55" x2="320" y2="85" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+          </svg>
+          <div class="graph-node node-party" style="left: 30px; top: 35px; font-size: 7px; text-align: center;">Acme<br>Corp</div>
+          <div class="graph-node node-party" style="right: 90px; top: 35px; font-size: 7px; text-align: center;">Beta<br>Inc</div>
+          <div class="graph-node node-obligation" style="left: 135px; top: 20px; font-size: 7px;">Audit</div>
+          <div class="graph-node node-date" style="right: 40px; top: 60px; font-size: 8px;">Q1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mode Comparison -->
+    <div class="modes-section">
+      <div class="section-label">Four Analysis Modes</div>
+      <div class="modes-grid">
+        <div class="mode-card">
+          <div class="mode-name">Base</div>
+          <div class="mode-desc">Direct LLM, truncated 12K</div>
+          <div class="mode-con">✗ 90%+ document loss</div>
+          <div class="mode-con">✗ Full context rot</div>
+        </div>
+        <div class="mode-card">
+          <div class="mode-name">Retrieval</div>
+          <div class="mode-desc">BM25 → Top-K chunks</div>
+          <div class="mode-pro">✓ Query-focused</div>
+          <div class="mode-con">✗ Misses relationships</div>
+        </div>
+        <div class="mode-card recommended">
+          <div class="mode-name">RLM</div>
+          <div class="mode-desc">Parallel sub-calls + root</div>
+          <div class="mode-pro">✓ Full attention/chunk</div>
+          <div class="mode-pro">✓ Zero context rot</div>
+        </div>
+        <div class="mode-card recommended">
+          <div class="mode-name">RLM + Graph</div>
+          <div class="mode-desc">RLM + entity extraction</div>
+          <div class="mode-pro">✓ Cross-doc relations</div>
+          <div class="mode-pro">✓ Complex queries</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">1800</div>
+        <div class="stat-label">Chars/chunk</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">24</div>
+        <div class="stat-label">Parallel calls</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0.7</div>
+        <div class="stat-label">Merge threshold</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">~3x</div>
+        <div class="stat-label">Cost for 24x</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">0%</div>
+        <div class="stat-label">Attention loss</div>
+      </div>
+    </div>
+
+    <!-- Contrarian -->
+    <div class="contrarian">
+      <div class="contrarian-icon">💡</div>
+      <div class="contrarian-text">
+        Everyone's chasing bigger context windows—1M tokens, 10M, "infinite context." That's the wrong direction.
+        <strong>The answer isn't bigger windows. It's smarter decomposition.</strong>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <span class="author">Rob Foster</span> · robfosterdotnet/RecursiveLanguageModel · Open Source · MIT License
+    </footer>
+  </div>
+</body>
+</html>

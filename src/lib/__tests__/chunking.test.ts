@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildChunks } from "@/lib/chunking";
+import { buildChunks } from "@/lib/analysis/chunking";
 import {
   sampleDocuments,
   shortDocument,

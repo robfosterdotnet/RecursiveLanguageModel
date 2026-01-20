@@ -1,4 +1,4 @@
-import type { Chunk, DocumentInput } from "@/lib/types";
+import type { Chunk, DocumentInput } from "@/lib/analysis/types";
 
 const DEFAULT_CHUNK_SIZE = 1800;
 

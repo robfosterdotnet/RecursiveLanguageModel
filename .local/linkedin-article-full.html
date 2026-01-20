@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your 128K Context Window Is Lying to You - LinkedIn Article</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .meta {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0a66c2;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #000;
+            margin: 30px 0 20px 0;
+            line-height: 1.2;
+        }
+
+        h2 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #000;
+            margin: 40px 0 20px 0;
+            line-height: 1.3;
+        }
+
+        h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin: 30px 0 15px 0;
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        strong {
+            font-weight: 600;
+            color: #000;
+        }
+
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        pre code {
+            background: transparent;
+            color: #d4d4d4;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+
+        ol, ul {
+            margin-left: 30px;
+            margin-bottom: 16px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 40px 0;
+        }
+
+        .hashtags {
+            color: #0a66c2;
+            font-weight: 500;
+            margin-top: 30px;
+        }
+
+        .instructions {
+            background: #f0f8ff;
+            border-left: 4px solid #0a66c2;
+            padding: 20px;
+            margin-top: 40px;
+            border-radius: 4px;
+        }
+
+        .instructions h2 {
+            margin-top: 0;
+            color: #0a66c2;
+        }
+
+        .instructions ol {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="meta">
+            <strong>~1000 words | Best as a LinkedIn Article (not post)</strong>
+        </div>
+
+        <h1>Your 128K Context Window Is Lying to You</h1>
+
+        <h2>The Hidden Problem Killing Your Document Analysis</h2>
+
+        <p>Your 128K context window is lying to you.</p>
+
+        <p>Here's what's actually happening inside.</p>
+
+        <p>I've been building document analysis systems for legal contracts—the kind where missing a single clause can cost millions. And I kept hitting the same wall.</p>
+
+        <p>The "lost in the middle" problem.</p>
+
+        <p>Research from Stanford and elsewhere confirmed what I was seeing: LLMs pay strong attention to the beginning and end of their context. The middle? It fades. Information decays. Critical clauses get missed.</p>
+
+        <p>I call this <strong>context rot</strong>.</p>
+
+        <p>I built an open-source implementation to solve it. The repo is called <strong>RecursiveLanguageModel</strong> on GitHub (link in comments).</p>
+
+        <p>Let me walk you through the architecture.</p>
+
+        <hr>
+
+        <h2>The Math Doesn't Lie</h2>
+
+        <p>Even with 128K token windows, attention isn't uniform.</p>
+
+        <p>Stuff at position 60K gets roughly 40% less attention than stuff at position 1K. Your indemnification clause buried on page 47? The model might as well be skimming.</p>
+
+        <p>The naive solution: truncate to ~12K characters.</p>
+
+        <p>The result: you're literally throwing away 90% of the document.</p>
+
+        <p>In code, this is the <code>base</code> mode in <code>src/lib/analyze.ts</code>—it just concatenates and truncates. Simple. Lossy.</p>
+
+        <hr>
+
+        <h2>RAG Doesn't Solve This Either</h2>
+
+        <p>"Just use retrieval!" they said.</p>
+
+        <p>BM25 or vector search grabs your top-K chunks. Feed them to the LLM. Problem solved, right?</p>
+
+        <p>Wrong.</p>
+
+        <p>RAG has three fatal flaws for complex documents:</p>
+
+        <ol>
+            <li><strong>Query-dependent tunnel vision</strong> — You only retrieve what matches your query. Cross-references between Section 4.2 and Exhibit B? Missed.</li>
+            <li><strong>No synthesis across chunks</strong> — Each chunk is retrieved independently. The relationship between Party A's obligation in chunk 12 and the termination clause in chunk 47? Invisible.</li>
+            <li><strong>Top-K is a lossy filter</strong> — Set K=8 and you're betting the answer lives in 8 chunks. In a 200-chunk contract, that's a 96% information discard rate.</li>
+        </ol>
+
+        <p>The <code>retrieval</code> mode in the repo (<code>src/lib/retrieval.ts</code>) implements BM25-style term frequency ranking. It works for simple queries. It fails for complex legal analysis.</p>
+
+        <p>I needed something different.</p>
+
+        <hr>
+
+        <h2>Recursive Language Models: Divide and Conquer</h2>
+
+        <p>Here's the architecture that actually works.</p>
+
+        <h3>Step 1: Chunk Intelligently</h3>
+
+        <p>Split documents into ~1800 character segments at paragraph boundaries. Not arbitrary token splits—semantic units.</p>
+
+        <p>From <code>src/lib/chunking.ts</code>:</p>
+        <pre><code>const splitParagraphs = (text: string) =>
+  text.split(/\n\s*\n/g)
+    .map((part) => part.trim())
+    .filter(Boolean);</code></pre>
+
+        <p>Paragraph-aware chunking preserves logical units. A clause stays together.</p>
+
+        <h3>Step 2: Parallel Sub-calls</h3>
+
+        <p>Each chunk gets its own dedicated LLM call. The sub-model sees ONLY that chunk plus the question.</p>
+
+        <p>No context competition. Full attention. Zero middle-of-context loss.</p>
+
+        <p>The sub-model returns structured output:</p>
+        <pre><code>{
+  "relevant": true,
+  "summary": "Section 4.2 grants Licensor right to audit...",
+  "citations": ["doc-1-chunk-12"]
+}</code></pre>
+
+        <h3>Step 3: Root Aggregation</h3>
+
+        <p>A senior model receives ALL the distilled findings—not the raw text.</p>
+
+        <p>It sees:</p>
+        <ul>
+            <li>24 focused summaries (not 24 raw chunks)</li>
+            <li>Relevance-filtered signal (irrelevant chunks already discarded)</li>
+            <li>Citation trails for every claim</li>
+        </ul>
+
+        <h3>Step 4: Rewrite Pass</h3>
+
+        <p>Final pass optimizes for legal precision AND plain-language clarity.</p>
+
+        <hr>
+
+        <h2>Why This Beats Context Rot</h2>
+
+        <p>The insight is simple:</p>
+
+        <p>Each sub-call operates with FULL attention on a small window.</p>
+
+        <p>There's no "middle" to get lost in when your context is 1800 characters.</p>
+
+        <p>The root model never sees raw text at all. It sees pre-digested findings. Efficient attention on synthesized information.</p>
+
+        <p>Irrelevant chunks (<code>relevant: false</code>) get filtered before aggregation. Signal-to-noise ratio goes up dramatically.</p>
+
+        <p>And citations flow through the entire pipeline. Every claim traces back to a specific chunk ID.</p>
+
+        <hr>
+
+        <h2>RLM + Knowledge Graph: The Advanced Mode</h2>
+
+        <p>For complex multi-party contracts, I added a second layer: <code>rlm-graph</code> mode.</p>
+
+        <p>During each sub-call, the model also extracts entities and relationships.</p>
+
+        <p><strong>Entity types:</strong></p>
+        <ul>
+            <li>Parties (companies, signatories)</li>
+            <li>Dates (effective, expiration, deadlines)</li>
+            <li>Amounts (dollar figures, percentages)</li>
+            <li>Clauses (indemnification, termination, force majeure)</li>
+            <li>Obligations, rights, conditions</li>
+        </ul>
+
+        <p><strong>Relationship types:</strong></p>
+        <ul>
+            <li><code>has_obligation</code>: Party → Obligation</li>
+            <li><code>has_right</code>: Party → Right</li>
+            <li><code>depends_on</code>: Obligation → Condition</li>
+            <li><code>references</code>: Clause → Clause (cross-references)</li>
+        </ul>
+
+        <p>Entities get merged across chunks using Jaccard similarity (threshold: 0.7). "Acme Corp" in chunk 3 and "Acme Corporation" in chunk 47? Same node.</p>
+
+        <p>The root model receives both findings AND graph context.</p>
+
+        <p>Now you can answer: "What obligations does Party A have that depend on conditions controlled by Party B?"</p>
+
+        <p>Across a 100-page contract. With citations.</p>
+
+        <hr>
+
+        <h2>The Numbers from Production</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Chunk size</td>
+                    <td>1800 chars</td>
+                </tr>
+                <tr>
+                    <td>Max parallel sub-calls</td>
+                    <td>24</td>
+                </tr>
+                <tr>
+                    <td>Sub-model</td>
+                    <td>Lightweight (gpt-4o-mini class)</td>
+                </tr>
+                <tr>
+                    <td>Root model</td>
+                    <td>Full capability</td>
+                </tr>
+                <tr>
+                    <td>Similarity threshold</td>
+                    <td>0.7</td>
+                </tr>
+                <tr>
+                    <td>Retrieval top-K (for comparison)</td>
+                    <td>8</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>Cost structure: Sub-calls use cheap, fast models. Only the root aggregation needs the expensive model. You get 24x coverage at roughly 3x the cost of a single large-context call.</p>
+
+        <hr>
+
+        <h2>The Contrarian Take</h2>
+
+        <p>Everyone's chasing bigger context windows.</p>
+
+        <p>1M tokens. 10M tokens. "Infinite context."</p>
+
+        <p>I think that's the wrong direction.</p>
+
+        <p>Attention doesn't scale linearly with context. Bigger windows mean more diluted focus. More context rot, not less.</p>
+
+        <p>The answer isn't bigger windows.</p>
+
+        <p>It's smarter decomposition.</p>
+
+        <p>Recursive architectures that guarantee full attention on every segment. Structured aggregation that preserves signal. Knowledge graphs that capture relationships the raw text obscures.</p>
+
+        <p>The best legal AI won't have the biggest context window.</p>
+
+        <p>It'll have the smartest architecture.</p>
+
+        <hr>
+
+        <h2>Try It Yourself</h2>
+
+        <p>The full implementation is open source: <strong>robfosterdotnet/RecursiveLanguageModel</strong> on GitHub.</p>
+
+        <p>Four modes to compare:</p>
+        <ul>
+            <li><code>base</code> — truncated context (the naive approach)</li>
+            <li><code>retrieval</code> — BM25 top-K (traditional RAG)</li>
+            <li><code>rlm</code> — recursive sub-calls + root aggregation</li>
+            <li><code>rlm-graph</code> — RLM + knowledge graph extraction</li>
+        </ul>
+
+        <p>Upload a contract. Ask a question. Watch the difference.</p>
+
+        <hr>
+
+        <p>What's your experience with long-document analysis? Have you hit the "lost in the middle" problem?</p>
+
+        <p>Drop a comment—I'm curious what approaches are working for you.</p>
+
+        <p class="hashtags">#AI #LegalTech #LLM #MachineLearning #OpenSource</p>
+
+        <div class="instructions">
+            <h2>Posting Instructions</h2>
+            <ol>
+                <li>Create as a LinkedIn <strong>Article</strong> (not a post)</li>
+                <li>Add the infographic as the cover image</li>
+                <li>Comment with repo link after publishing: <code>https://github.com/robfosterdotnet/RecursiveLanguageModel</code></li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

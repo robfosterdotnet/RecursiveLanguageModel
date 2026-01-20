@@ -1,0 +1,71 @@
+# LinkedIn Post - Short Version (Viral Potential)
+
+**~250 words | Best for initial engagement**
+
+---
+
+Your 128K context window is lying to you.
+
+Here's what's actually happening inside.
+
+I built a legal contract analyzer and kept hitting the same wall:
+
+Information in the MIDDLE of long contexts gets ignored.
+
+Stanford calls it "lost in the middle."
+I call it context rot.
+
+The fix isn't bigger context windows.
+It's smarter architecture.
+
+Recursive Language Models (RLM):
+
+→ Chunk documents into ~1800 char segments
+→ Each chunk gets its OWN LLM call (full attention, zero decay)
+→ Sub-model returns: relevant? summary? citations?
+→ Root model synthesizes all findings
+→ Rewrite pass for clarity
+
+Why this works:
+
+There's no "middle" to get lost in when your context is 1800 characters.
+
+The root model never sees raw text—just distilled findings.
+
+I added a knowledge graph layer:
+
+→ Extract entities (parties, dates, amounts, clauses)
+→ Extract relationships (has_obligation, depends_on, references)
+→ Merge duplicates across chunks (Jaccard similarity)
+→ Feed graph summary to root model
+
+Now you can ask:
+
+"What obligations does Party A have that depend on conditions controlled by Party B?"
+
+Across a 100-page contract. With citations.
+
+Everyone's chasing 1M token windows.
+
+I think that's backwards.
+
+Bigger windows = more diluted attention.
+
+The answer is decomposition, not expansion.
+
+Open sourced the full implementation.
+
+Link in comments.
+
+What's your approach to long-document analysis?
+
+#AI #LegalTech #LLM #SoftwareArchitecture #OpenSource
+
+---
+
+## Posting Instructions
+
+1. Copy text above (between the `---` markers)
+2. Post WITHOUT the GitHub link in the body
+3. Immediately comment with: `Repo: https://github.com/robfosterdotnet/RecursiveLanguageModel`
+4. Attach the infographic screenshot (see `rlm-infographic.html`)

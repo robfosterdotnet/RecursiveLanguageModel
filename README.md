@@ -496,32 +496,32 @@ src/
 ├── components/
 │   └── ui/                   # shadcn/ui components
 ├── lib/
-│   ├── analyze.ts            # Core orchestration logic for all four modes
-│   ├── chunking.ts           # Paragraph-based document chunking
-│   ├── retrieval.ts          # BM25-style term frequency ranking
-│   ├── graph.ts              # Knowledge graph construction and entity merging
-│   ├── azure.ts              # Azure OpenAI client wrapper
-│   ├── prompts.ts            # System prompts for sub/root models and extraction
-│   └── types.ts              # TypeScript type definitions
+│   ├── analysis/             # Analysis orchestration, prompts, and types
+│   ├── llm/                  # LLM client wrappers (Azure OpenAI)
+│   └── utils.ts              # UI helper (className merge)
+├── config/
+│   └── env.ts                # Environment validation and deployment selection
 ```
 
 ### Key Modules
 
 | Module | Purpose |
 |--------|---------|
-| `analyze.ts` | Orchestrates all four modes; state machine for INIT → CHUNK → SUBCALL → AGGREGATE → RESPOND |
-| `chunking.ts` | Splits documents by paragraph, respects chunk size limits |
-| `retrieval.ts` | Simple BM25-like scoring: tokenize → term frequency → rank |
-| `graph.ts` | Builds knowledge graphs from entity extractions; merges entities using fuzzy name matching; supports entity types (party, date, amount, etc.) and relationship types (has_obligation, references, etc.) |
-| `azure.ts` | Thin wrapper around Azure OpenAI client |
-| `prompts.ts` | System prompts constraining sub-model, root-model, and entity extraction behavior |
+| `analysis/analyze.ts` | Orchestrates all four modes; state machine for INIT → CHUNK → SUBCALL → AGGREGATE → RESPOND |
+| `analysis/chunking.ts` | Splits documents by paragraph, respects chunk size limits |
+| `analysis/retrieval.ts` | Simple BM25-like scoring: tokenize → term frequency → rank |
+| `analysis/graph.ts` | Builds knowledge graphs from entity extractions; merges entities using fuzzy name matching; supports entity types (party, date, amount, etc.) and relationship types (has_obligation, references, etc.) |
+| `analysis/prompts.ts` | System prompts constraining sub-model, root-model, and entity extraction behavior |
+| `analysis/types.ts` | TypeScript type definitions for requests/responses |
+| `llm/azure.ts` | Thin wrapper around Azure OpenAI client |
+| `config/env.ts` | Environment validation and deployment selection |
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- Azure OpenAI deployment (or modify `azure.ts` for OpenAI/Anthropic)
+- Azure OpenAI deployment (or modify `src/lib/llm/azure.ts` for OpenAI/Anthropic)
 
 ### Environment Variables
 

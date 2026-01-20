@@ -1,4 +1,4 @@
-import type { AnalyzeResponse } from "@/lib/types";
+import type { AnalyzeResponse } from "@/lib/analysis/types";
 
 type LogEvent = {
   type: "log";

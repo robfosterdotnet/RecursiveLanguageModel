@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RLM - Short Article Visual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .card {
+      width: 600px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 48px;
+      backdrop-filter: blur(10px);
+      color: #ffffff;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    /* Problem vs Solution */
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .side {
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .side.problem {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .side.solution {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .side-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+
+    .side-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .side.problem .side-label { color: #fca5a5; }
+    .side.solution .side-label { color: #86efac; }
+
+    .side-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+    }
+
+    .side-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    /* Context bar */
+    .context-bar {
+      margin-bottom: 32px;
+    }
+
+    .bar-label {
+      font-size: 11px;
+      color: #64748b;
+      text-align: center;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .bar-visual {
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(90deg,
+        rgba(34, 197, 94, 0.8) 0%,
+        rgba(34, 197, 94, 0.6) 15%,
+        rgba(239, 68, 68, 0.4) 40%,
+        rgba(239, 68, 68, 0.2) 50%,
+        rgba(239, 68, 68, 0.4) 60%,
+        rgba(34, 197, 94, 0.6) 85%,
+        rgba(34, 197, 94, 0.8) 100%
+      );
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rot-badge {
+      background: rgba(0,0,0,0.7);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #fca5a5;
+    }
+
+    /* Key insight */
+    .insight {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .insight-icon {
+      font-size: 28px;
+    }
+
+    .insight-text {
+      font-size: 14px;
+      color: #fef3c7;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    .insight-text strong {
+      color: #fcd34d;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .author {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <header class="header">
+      <div class="badge">Document AI</div>
+      <h1 class="title">Recursive Language Models</h1>
+      <p class="subtitle">Solving the 128K token attention problem</p>
+    </header>
+
+    <div class="comparison">
+      <div class="side problem">
+        <div class="side-icon">🔥</div>
+        <div class="side-label">The Problem</div>
+        <div class="side-title">Context Rot</div>
+        <div class="side-desc">Info in the middle of long contexts gets lost. Page 47? Skimmed.</div>
+      </div>
+      <div class="side solution">
+        <div class="side-icon">✂️</div>
+        <div class="side-label">The Solution</div>
+        <div class="side-title">Divide & Conquer</div>
+        <div class="side-desc">Parallel sub-calls with full attention on each chunk.</div>
+      </div>
+    </div>
+
+    <div class="context-bar">
+      <div class="bar-label">Attention Distribution in 128K Window</div>
+      <div class="bar-visual">
+        <div class="rot-badge">~40% ATTENTION LOSS IN MIDDLE</div>
+      </div>
+    </div>
+
+    <div class="insight">
+      <div class="insight-icon">💡</div>
+      <div class="insight-text">
+        <strong>The answer isn't bigger context windows.</strong><br>
+        It's smarter decomposition.
+      </div>
+    </div>
+
+    <footer class="footer">
+      <span class="author">Rob Foster</span> · Open Source · MIT License
+    </footer>
+  </div>
+</body>
+</html>

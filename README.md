@@ -1,6 +1,6 @@
 # Document Analysis with Recursive Language Models
 
-A Next.js application that implements the **Recursive Language Models (RLM)** approach from MIT research for analyzing documents that exceed typical LLM context limits. This pilot demonstrates three analysis modes—Base, Retrieval, and RLM—allowing direct comparison of their effectiveness on document analysis tasks.
+A Next.js application that implements the **Recursive Language Models (RLM)** approach from MIT research for analyzing documents that exceed typical LLM context limits. This pilot demonstrates four analysis modes—Base, Retrieval, RLM, and RLM + Graph—allowing direct comparison of their effectiveness on document analysis tasks.
 
 ## The Problem: Context Limits and "Context Rot"
 
@@ -61,9 +61,9 @@ RLMs treat the document as an **external environment** rather than stuffing it i
                       └──────────────┘
 ```
 
-### The Three Analysis Modes
+### The Four Analysis Modes
 
-This application implements three modes to demonstrate the RLM advantage:
+This application implements four modes to demonstrate the RLM advantage:
 
 #### 1. Base Mode
 Direct LLM call with the entire document concatenated. Simple but limited.
@@ -97,6 +97,35 @@ The full recursive approach from the MIT paper.
 
 - **Why it works**: Each sub-call operates on a small, focused snippet. The sub-model can't hallucinate facts from other parts of the document because it literally doesn't see them.
 
+#### 4. RLM + Graph Mode (Recursive with Knowledge Graph)
+Enhances RLM with structured knowledge graph extraction for relationship-heavy documents.
+
+- **How**:
+  1. Chunk documents into ~1800 character segments
+  2. Run sub-model on each chunk in parallel batches
+  3. Sub-model extracts both:
+     - Relevant findings with citations (standard RLM)
+     - Structured entities and relationships (graph extraction)
+  4. Build unified knowledge graph by merging entities across chunks
+  5. Root model receives findings + graph summary for aggregation
+  6. Optional rewrite pass for clarity
+
+- **Best for**:
+  - Legal contracts with multiple parties and obligations
+  - Documents with complex cross-references
+  - Compliance reviews requiring relationship tracking
+  - Questions about how entities interact ("Who has obligations to whom?")
+  - Understanding document structure and dependencies
+
+- **Knowledge Graph Features**:
+  - **Entity Types**: parties, dates, amounts, clauses, obligations, rights, conditions, documents, sections
+  - **Relationship Types**: has_obligation, has_right, references, depends_on, effective_on, expires_on, involves_amount, defined_in, related_to
+  - **Entity Merging**: Automatically merges similar entities across chunks using fuzzy name matching
+  - **Confidence Scoring**: Each entity and relationship includes a confidence score
+  - **Source Tracking**: Tracks which chunks contributed to each entity/relationship
+
+- **Why it works**: Combines the scalability of RLM with structured relationship extraction. The knowledge graph provides a semantic map of the document, making it easier to answer questions about relationships, dependencies, and cross-references that span multiple sections.
+
 ## When to Use Each Mode
 
 | Scenario | Recommended Mode |
@@ -104,10 +133,14 @@ The full recursive approach from the MIT paper.
 | Document < 10K chars, simple question | Base |
 | Large document, answer in one section | Retrieval |
 | Large document, answer spread throughout | RLM |
-| Legal contract review | RLM |
+| Legal contract review | RLM or RLM + Graph |
 | "Summarize all risks" across 100 pages | RLM |
 | "What is the termination clause?" | Retrieval |
 | Quick summary of short memo | Base |
+| "Who has obligations to whom?" | RLM + Graph |
+| "Map all parties and their relationships" | RLM + Graph |
+| "Find all cross-references between sections" | RLM + Graph |
+| Multi-party contract with dependencies | RLM + Graph |
 
 ## Key Implementation Details
 
@@ -144,6 +177,47 @@ The sub-model is instructed to:
 - Always include the chunk ID in citations
 - Return `relevant: false` if the snippet doesn't address the question
 
+### Knowledge Graph Schema (RLM + Graph Mode)
+
+In RLM + Graph mode, each sub-call extracts both findings and structured entities/relationships:
+
+```json
+{
+  "relevant": true,
+  "summary": "This section establishes obligations for Party A...",
+  "citations": ["doc-1-chunk-7"],
+  "entities": [
+    {
+      "type": "party",
+      "name": "Party A",
+      "properties": { "role": "buyer" },
+      "confidence": 0.95
+    },
+    {
+      "type": "obligation",
+      "name": "Payment within 30 days",
+      "properties": { "deadline": "30 days" },
+      "confidence": 0.9
+    }
+  ],
+  "relationships": [
+    {
+      "type": "has_obligation",
+      "sourceName": "Party A",
+      "targetName": "Payment within 30 days",
+      "properties": {},
+      "confidence": 0.9
+    }
+  ]
+}
+```
+
+After all sub-calls complete, the system:
+1. **Merges entities** across chunks using fuzzy name matching (e.g., "Party A" and "party a" are merged)
+2. **Builds a unified graph** with deduplicated nodes and edges
+3. **Generates a graph summary** showing entity counts by type and key relationships
+4. **Passes the graph summary to the root model** along with the findings for graph-aware aggregation
+
 ### Root Model Aggregation
 
 The root model receives all relevant findings and must:
@@ -151,6 +225,10 @@ The root model receives all relevant findings and must:
 - Preserve citations exactly as provided
 - Explicitly state if findings are insufficient
 - Structure the response with clear organization
+
+In RLM + Graph mode, the root model also receives:
+- **Graph summary**: Entity counts by type and key relationships
+- This enables the model to answer relationship-based questions more accurately by understanding the document's semantic structure
 
 ### Parallel Processing
 
@@ -169,12 +247,12 @@ All answers include bracketed citations linking claims to source chunks:
 
 ## Configuration Options
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `chunkSize` | 1800 | Characters per chunk |
-| `topK` | 8 | Chunks for retrieval mode |
-| `maxSubcalls` | 24 | Maximum chunks to analyze in RLM mode |
-| `concurrency` | 6 | Parallel sub-calls |
+| Parameter | Default | Applies To | Description |
+|-----------|---------|------------|-------------|
+| `chunkSize` | 1800 | Retrieval, RLM, RLM + Graph | Characters per chunk |
+| `topK` | 8 | Retrieval | Chunks for retrieval mode |
+| `maxSubcalls` | 24 | RLM, RLM + Graph | Maximum chunks to analyze in RLM modes |
+| `concurrency` | 6 | RLM, RLM + Graph | Parallel sub-calls |
 
 ## Architecture
 
@@ -196,25 +274,32 @@ All answers include bracketed citations linking claims to source chunks:
                      │  (analyze.ts) │
                      └──────┬───────┘
                             │
-              ┌─────────────┼─────────────┐
-              ▼             ▼             ▼
-        ┌──────────┐ ┌──────────┐ ┌──────────┐
-        │   Base   │ │ Retrieval│ │   RLM    │
-        │   Mode   │ │   Mode   │ │   Mode   │
-        └──────────┘ └──────────┘ └────┬─────┘
-                                       │
-                            ┌──────────┼──────────┐
-                            ▼          ▼          ▼
+              ┌─────────────┼─────────────┬─────────────┐
+              ▼             ▼             ▼             ▼
+        ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+        │   Base   │ │ Retrieval│ │   RLM    │ │RLM+Graph │
+        │   Mode   │ │   Mode   │ │   Mode   │ │   Mode   │
+        └──────────┘ └──────────┘ └────┬─────┘ └────┬─────┘
+                                       │            │
+                            ┌──────────┼────────────┤
+                            ▼          ▼            ▼
                       ┌─────────┐┌─────────┐┌─────────┐
                       │Sub-call ││Sub-call ││Sub-call │
                       │ Batch 1 ││ Batch 2 ││ Batch N │
-                      └─────────┘└─────────┘└─────────┘
+                      │         ││         ││ +Graph  │
+                      └─────────┘└─────────┘└────┬────┘
                             │          │          │
                             └──────────┼──────────┘
                                        ▼
                               ┌──────────────┐
+                              │ Graph Merge  │
+                              │  (RLM+Graph) │
+                              └──────┬───────┘
+                                     ▼
+                              ┌──────────────┐
                               │  Root Model  │
                               │  Aggregation │
+                              │ (+Graph Sum) │
                               └──────────────┘
                                        │
                                        ▼
@@ -238,11 +323,12 @@ src/
 ├── components/
 │   └── ui/                   # shadcn/ui components
 ├── lib/
-│   ├── analyze.ts            # Core orchestration logic
+│   ├── analyze.ts            # Core orchestration logic for all four modes
 │   ├── chunking.ts           # Paragraph-based document chunking
 │   ├── retrieval.ts          # BM25-style term frequency ranking
+│   ├── graph.ts              # Knowledge graph construction and entity merging
 │   ├── azure.ts              # Azure OpenAI client wrapper
-│   ├── prompts.ts            # System prompts for sub/root models
+│   ├── prompts.ts            # System prompts for sub/root models and extraction
 │   └── types.ts              # TypeScript type definitions
 ```
 
@@ -250,11 +336,12 @@ src/
 
 | Module | Purpose |
 |--------|---------|
-| `analyze.ts` | Orchestrates all three modes; state machine for INIT → CHUNK → SUBCALL → AGGREGATE → RESPOND |
+| `analyze.ts` | Orchestrates all four modes; state machine for INIT → CHUNK → SUBCALL → AGGREGATE → RESPOND |
 | `chunking.ts` | Splits documents by paragraph, respects chunk size limits |
 | `retrieval.ts` | Simple BM25-like scoring: tokenize → term frequency → rank |
+| `graph.ts` | Builds knowledge graphs from entity extractions; merges entities using fuzzy name matching; supports entity types (party, date, amount, etc.) and relationship types (has_obligation, references, etc.) |
 | `azure.ts` | Thin wrapper around Azure OpenAI client |
-| `prompts.ts` | System prompts constraining sub-model and root-model behavior |
+| `prompts.ts` | System prompts constraining sub-model, root-model, and entity extraction behavior |
 
 ## Getting Started
 
@@ -292,16 +379,18 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Cost Considerations
 
-RLM mode makes multiple LLM calls. Cost scales with:
+RLM and RLM + Graph modes make multiple LLM calls. Cost scales with:
 
 - Number of chunks processed (`maxSubcalls`)
 - Root model aggregation complexity
 - Optional rewrite pass
+- **Graph mode only**: Entity extraction on each chunk (additional tokens in sub-call responses)
 
 **Cost optimization strategies:**
 - Use a smaller/cheaper model for sub-calls (e.g., `gpt-4o-mini`)
 - Reduce `maxSubcalls` for exploratory questions
 - Use Retrieval mode when you know the answer is localized
+- Use standard RLM mode instead of RLM + Graph if you don't need relationship mapping
 
 ## Theoretical Background
 

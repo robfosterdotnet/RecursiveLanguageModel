@@ -164,7 +164,7 @@ describe("Home Page", () => {
       });
     });
 
-    it("should show advanced parameters inputs", async () => {
+    it("should show advanced parameters based on selected mode", async () => {
       const user = userEvent.setup();
       render(<Home />);
 
@@ -172,10 +172,26 @@ describe("Home Page", () => {
       await user.type(screen.getByPlaceholderText(/paste document text/i), "Content");
       await user.click(screen.getByRole("button", { name: /continue/i }));
 
+      // Default mode is RLM - should show Chunk size and Max subcalls, but not Top K
+      await waitFor(() => {
+        expect(screen.getByText(/Chunk size/i)).toBeInTheDocument();
+        expect(screen.getByText(/Max subcalls/i)).toBeInTheDocument();
+        expect(screen.queryByText(/Top K/i)).not.toBeInTheDocument();
+      });
+
+      // Switch to retrieval mode - should show Chunk size and Top K, but not Max subcalls
+      await user.click(screen.getByRole("tab", { name: /retrieval/i }));
       await waitFor(() => {
         expect(screen.getByText(/Chunk size/i)).toBeInTheDocument();
         expect(screen.getByText(/Top K/i)).toBeInTheDocument();
-        expect(screen.getByText(/Max subcalls/i)).toBeInTheDocument();
+        expect(screen.queryByText(/Max subcalls/i)).not.toBeInTheDocument();
+      });
+
+      // Switch to base mode - should show no advanced parameters
+      await user.click(screen.getByRole("tab", { name: /base/i }));
+      await waitFor(() => {
+        expect(screen.queryByText(/Chunk size/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Advanced Parameters/i)).not.toBeInTheDocument();
       });
     });
   });

@@ -10,7 +10,6 @@ export type AnalyzeOptions = {
   topK?: number;
   maxSubcalls?: number;
   baseMaxChars?: number;
-  concurrency?: number;
 };
 
 export type AnalyzeRequest = {

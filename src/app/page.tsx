@@ -241,7 +241,6 @@ export default function Home() {
   const [chunkSize, setChunkSize] = useState(1800);
   const [topK, setTopK] = useState(8);
   const [maxSubcalls, setMaxSubcalls] = useState(24);
-  const [concurrency, setConcurrency] = useState(6);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -375,7 +374,7 @@ export default function Home() {
           documents,
           question,
           mode,
-          options: { chunkSize, topK, maxSubcalls, concurrency },
+          options: { chunkSize, topK, maxSubcalls },
         }),
       });
 
@@ -703,70 +702,67 @@ export default function Home() {
                   </Tabs>
                 </div>
 
-                {/* Advanced Parameters */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-foreground">
-                    Advanced Parameters
-                  </label>
-                  <div className="grid gap-4 md:grid-cols-4">
-                    <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Chunk size
-                      </label>
-                      <Input
-                        type="number"
-                        value={chunkSize}
-                        onChange={(e) => setChunkSize(Number(e.target.value))}
-                        min={500}
-                        max={5000}
-                        className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">Characters per chunk</p>
-                    </div>
-                    <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Top K
-                      </label>
-                      <Input
-                        type="number"
-                        value={topK}
-                        onChange={(e) => setTopK(Number(e.target.value))}
-                        min={2}
-                        max={40}
-                        className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">Chunks for retrieval</p>
-                    </div>
-                    <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Max subcalls
-                      </label>
-                      <Input
-                        type="number"
-                        value={maxSubcalls}
-                        onChange={(e) => setMaxSubcalls(Number(e.target.value))}
-                        min={2}
-                        max={120}
-                        className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">RLM recursion limit</p>
-                    </div>
-                    <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
-                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Concurrency
-                      </label>
-                      <Input
-                        type="number"
-                        value={concurrency}
-                        onChange={(e) => setConcurrency(Number(e.target.value))}
-                        min={1}
-                        max={12}
-                        className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground">Parallel subcalls</p>
+                {/* Advanced Parameters - shown only for modes that use them */}
+                {mode !== "base" && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-foreground">
+                      Advanced Parameters
+                    </label>
+                    <div className={`grid gap-4 ${mode === "rlm" ? "md:grid-cols-2" : "md:grid-cols-2"}`}>
+                      {/* Chunk size - used by retrieval and rlm */}
+                      <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
+                        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Chunk size
+                        </label>
+                        <Input
+                          type="number"
+                          value={chunkSize}
+                          onChange={(e) => setChunkSize(Number(e.target.value))}
+                          min={500}
+                          max={5000}
+                          className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground">Characters per chunk</p>
+                      </div>
+
+                      {/* Top K - only used by retrieval */}
+                      {mode === "retrieval" && (
+                        <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
+                          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Top K
+                          </label>
+                          <Input
+                            type="number"
+                            value={topK}
+                            onChange={(e) => setTopK(Number(e.target.value))}
+                            min={2}
+                            max={40}
+                            className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">Top ranked chunks to use</p>
+                        </div>
+                      )}
+
+                      {/* Max subcalls - only used by rlm */}
+                      {mode === "rlm" && (
+                        <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
+                          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Max subcalls
+                          </label>
+                          <Input
+                            type="number"
+                            value={maxSubcalls}
+                            onChange={(e) => setMaxSubcalls(Number(e.target.value))}
+                            min={2}
+                            max={120}
+                            className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">Max chunks to analyze</p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Error */}
                 {error && (

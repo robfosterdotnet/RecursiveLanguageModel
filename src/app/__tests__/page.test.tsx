@@ -160,7 +160,10 @@ describe("Home Page", () => {
       await waitFor(() => {
         expect(screen.getByRole("tab", { name: /base/i })).toBeInTheDocument();
         expect(screen.getByRole("tab", { name: /retrieval/i })).toBeInTheDocument();
-        expect(screen.getByRole("tab", { name: /rlm/i })).toBeInTheDocument();
+        // RLM tab has "RLM" and "Recursive" in its name
+        expect(screen.getByRole("tab", { name: /rlm.*recursive/i })).toBeInTheDocument();
+        // RLM + Graph tab has "RLM + Graph" and "Knowledge Graph" in its name
+        expect(screen.getByRole("tab", { name: /rlm \+ graph/i })).toBeInTheDocument();
       });
     });
 

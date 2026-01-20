@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import type { AnalyzeMode, AnalyzeResponse } from "@/lib/types";
+import type { AnalyzeMode, AnalyzeResponse, KnowledgeGraph } from "@/lib/types";
 
 type WorkflowStep = "documents" | "configure" | "results";
 
@@ -248,6 +248,7 @@ export default function Home() {
   const [uploadErrors, setUploadErrors] = useState<Record<number, string>>({});
   const [collapsedDocs, setCollapsedDocs] = useState<Set<number>>(new Set());
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [graph, setGraph] = useState<KnowledgeGraph | null>(null);
 
   const totalChars = documents.reduce((sum, doc) => sum + doc.text.length, 0);
   const hasDocuments = documents.some((doc) => doc.text.trim().length > 0);
@@ -361,6 +362,7 @@ export default function Home() {
     setError(null);
     setResult(null);
     setLogs([]);
+    setGraph(null);
 
     // Move to results step immediately to show terminal
     markStepComplete("configure");
@@ -414,6 +416,8 @@ export default function Home() {
                   type: data.logType,
                   timestamp: data.timestamp,
                 }]);
+              } else if (data.type === "graph") {
+                setGraph(data.data as KnowledgeGraph);
               } else if (data.type === "result") {
                 setResult(data.data as AnalyzeResponse);
               } else if (data.type === "error") {
@@ -670,7 +674,7 @@ export default function Home() {
                     Analysis Mode
                   </label>
                   <Tabs value={mode} onValueChange={(v) => setMode(v as AnalyzeMode)}>
-                    <TabsList className="grid w-full grid-cols-3 rounded-xl bg-white/50 p-1">
+                    <TabsList className="grid w-full grid-cols-4 rounded-xl bg-white/50 p-1">
                       <TabsTrigger
                         value="base"
                         className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
@@ -696,6 +700,15 @@ export default function Home() {
                         <div className="flex flex-col items-center gap-0.5 py-1">
                           <span className="font-medium">RLM</span>
                           <span className="text-[10px] text-muted-foreground">Recursive</span>
+                        </div>
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="rlm-graph"
+                        className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                      >
+                        <div className="flex flex-col items-center gap-0.5 py-1">
+                          <span className="font-medium">RLM + Graph</span>
+                          <span className="text-[10px] text-muted-foreground">Knowledge Graph</span>
                         </div>
                       </TabsTrigger>
                     </TabsList>
@@ -743,8 +756,8 @@ export default function Home() {
                         </div>
                       )}
 
-                      {/* Max subcalls - only used by rlm */}
-                      {mode === "rlm" && (
+                      {/* Max subcalls - used by rlm and rlm-graph */}
+                      {(mode === "rlm" || mode === "rlm-graph") && (
                         <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
                           <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                             Max subcalls
@@ -834,6 +847,11 @@ export default function Home() {
                             {result.debug.chunksUsed}/{result.debug.chunksTotal} chunks
                           </Badge>
                         )}
+                        {result.debug?.graphNodes !== undefined && (
+                          <Badge variant="outline" className="rounded-lg border-border/50 bg-white/50 font-mono text-xs">
+                            {result.debug.graphNodes} nodes, {result.debug.graphEdges} edges
+                          </Badge>
+                        )}
                         {result.usage?.totalTokens && (
                           <Badge variant="outline" className="rounded-lg border-border/50 bg-white/50 font-mono text-xs">
                             {result.usage.totalTokens.toLocaleString()} tokens
@@ -883,6 +901,73 @@ export default function Home() {
                     </div>
                   )}
 
+                  {/* Knowledge Graph Display */}
+                  {graph && graph.nodes.length > 0 && (
+                    <details className="group rounded-xl border border-border/40 bg-white/60 backdrop-blur">
+                      <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">📊</span>
+                          <span>Knowledge Graph</span>
+                          <Badge variant="outline" className="ml-2 rounded-lg border-border/50 bg-white/50 font-mono text-xs">
+                            {graph.nodes.length} entities, {graph.edges.length} relationships
+                          </Badge>
+                        </div>
+                        <ChevronRightIcon className="h-4 w-4 transition-transform group-open:rotate-90" />
+                      </summary>
+                      <div className="border-t border-border/30 p-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          {/* Entities by Type */}
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Entities
+                            </h4>
+                            <div className="max-h-[200px] space-y-2 overflow-y-auto">
+                              {Object.entries(
+                                graph.nodes.reduce((acc, node) => {
+                                  if (!acc[node.type]) acc[node.type] = [];
+                                  acc[node.type].push(node.name);
+                                  return acc;
+                                }, {} as Record<string, string[]>)
+                              ).map(([type, names]) => (
+                                <div key={type} className="text-xs">
+                                  <span className="font-medium text-foreground capitalize">{type}:</span>{" "}
+                                  <span className="text-muted-foreground">{names.join(", ")}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Relationships */}
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Relationships
+                            </h4>
+                            <div className="max-h-[200px] space-y-1 overflow-y-auto">
+                              {graph.edges.slice(0, 15).map((edge) => {
+                                const sourceNode = graph.nodes.find((n) => n.id === edge.source);
+                                const targetNode = graph.nodes.find((n) => n.id === edge.target);
+                                return (
+                                  <div key={edge.id} className="text-xs text-muted-foreground">
+                                    <span className="font-medium text-foreground">{sourceNode?.name}</span>
+                                    {" → "}
+                                    <span className="italic">{edge.type.replace(/_/g, " ")}</span>
+                                    {" → "}
+                                    <span className="font-medium text-foreground">{targetNode?.name}</span>
+                                  </div>
+                                );
+                              })}
+                              {graph.edges.length > 15 && (
+                                <p className="text-xs text-muted-foreground/60 italic">
+                                  ...and {graph.edges.length - 15} more relationships
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+                  )}
+
                   {/* Navigation */}
                   <div className="flex items-center justify-between rounded-xl bg-muted/30 px-5 py-4">
                     <Button
@@ -901,6 +986,7 @@ export default function Home() {
                         setResult(null);
                         setError(null);
                         setLogs([]);
+                        setGraph(null);
                         setCurrentStep("documents");
                         setCompletedSteps(new Set());
                       }}

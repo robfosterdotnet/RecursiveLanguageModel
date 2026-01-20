@@ -28,13 +28,14 @@ AZURE_OPENAI_DEPLOYMENT_SUB    # Optional: subcall model (default: gpt-5-nano)
 
 Next.js 16 document analysis application implementing Recursive Language Models (RLM) with Azure OpenAI.
 
-### Three Analysis Modes
+### Four Analysis Modes
 
 | Mode | How it works | Parameters used |
 |------|--------------|-----------------|
 | **Base** | Direct LLM on combined text (truncated to 12K chars) | None |
 | **Retrieval** | BM25-style ranking → Top-K chunks → LLM | `chunkSize`, `topK` |
 | **RLM** | Parallel sub-calls per chunk → Root aggregation → Rewrite | `chunkSize`, `maxSubcalls` |
+| **RLM + Graph** | RLM with entity/relationship extraction → Knowledge graph → Graph-aware aggregation | `chunkSize`, `maxSubcalls` |
 
 ### Data Flow
 
@@ -44,11 +45,12 @@ Frontend → /api/analyze-stream (SSE) → Chunk/Rank → Azure OpenAI → Strea
 
 ### Key Modules
 
-- `src/lib/analyze.ts` - Core analysis orchestration for all three modes
+- `src/lib/analyze.ts` - Core analysis orchestration for all four modes
 - `src/lib/azure.ts` - Azure OpenAI client wrapper
 - `src/lib/chunking.ts` - Paragraph-based document chunking
 - `src/lib/retrieval.ts` - BM25-like term frequency ranking
-- `src/lib/prompts.ts` - System prompts for sub-calls and root aggregation
+- `src/lib/graph.ts` - Knowledge graph construction and entity merging
+- `src/lib/prompts.ts` - System prompts for sub-calls, root aggregation, and entity extraction
 - `src/lib/types.ts` - TypeScript types for requests/responses
 
 ### API Routes
@@ -64,11 +66,18 @@ Single-page app with 3-step workflow (Documents → Configure → Results). Uses
 ## Type Conventions
 
 ```typescript
-type AnalyzeMode = "base" | "retrieval" | "rlm"
+type AnalyzeMode = "base" | "retrieval" | "rlm" | "rlm-graph"
 type DocumentInput = { id: string; text: string }
 type AnalyzeOptions = { chunkSize?, topK?, maxSubcalls?, baseMaxChars? }
 type Chunk = { id, docId, index, text, start, end }
 type SubFinding = { relevant, summary, citations[], chunkId, docId }
+
+// Knowledge Graph types (for rlm-graph mode)
+type EntityType = "party" | "date" | "amount" | "clause" | "obligation" | "right" | "condition" | "document" | "section"
+type RelationType = "has_obligation" | "has_right" | "references" | "depends_on" | "effective_on" | "expires_on" | "involves_amount" | "defined_in" | "related_to"
+type GraphNode = { id, type: EntityType, name, properties, sourceChunks[], confidence }
+type GraphEdge = { id, type: RelationType, source, target, properties, sourceChunk, confidence }
+type KnowledgeGraph = { nodes: GraphNode[], edges: GraphEdge[], metadata }
 ```
 
 ## Testing

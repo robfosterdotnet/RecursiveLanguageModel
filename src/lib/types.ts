@@ -1,4 +1,4 @@
-export type AnalyzeMode = "base" | "retrieval" | "rlm";
+export type AnalyzeMode = "base" | "retrieval" | "rlm" | "rlm-graph";
 
 export type DocumentInput = {
   id: string;
@@ -29,6 +29,8 @@ export type AnalyzeDebug = {
   subcalls?: number;
   truncated?: boolean;
   mode?: AnalyzeMode;
+  graphNodes?: number;
+  graphEdges?: number;
 };
 
 export type AnalyzeResponse = {
@@ -36,6 +38,7 @@ export type AnalyzeResponse = {
   mode: AnalyzeMode;
   usage?: AnalyzeUsage;
   debug?: AnalyzeDebug;
+  graph?: KnowledgeGraph;
 };
 
 export type Chunk = {
@@ -53,4 +56,72 @@ export type SubFinding = {
   citations: string[];
   chunkId: string;
   docId: string;
+};
+
+// Knowledge Graph Types
+export type EntityType =
+  | "party"
+  | "date"
+  | "amount"
+  | "clause"
+  | "obligation"
+  | "right"
+  | "condition"
+  | "document"
+  | "section";
+
+export type RelationType =
+  | "has_obligation"
+  | "has_right"
+  | "references"
+  | "depends_on"
+  | "effective_on"
+  | "expires_on"
+  | "involves_amount"
+  | "defined_in"
+  | "related_to";
+
+export type GraphNode = {
+  id: string;
+  type: EntityType;
+  name: string;
+  properties: Record<string, unknown>;
+  sourceChunks: string[];
+  confidence: number;
+};
+
+export type GraphEdge = {
+  id: string;
+  type: RelationType;
+  source: string;
+  target: string;
+  properties: Record<string, unknown>;
+  sourceChunk: string;
+  confidence: number;
+};
+
+export type KnowledgeGraph = {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  metadata: {
+    documentCount: number;
+    chunkCount: number;
+    extractionModel: string;
+  };
+};
+
+export type EntityExtraction = {
+  entities: Array<{
+    type: EntityType;
+    name: string;
+    properties?: Record<string, unknown>;
+    confidence: number;
+  }>;
+  relationships: Array<{
+    type: RelationType;
+    sourceName: string;
+    targetName: string;
+    properties?: Record<string, unknown>;
+    confidence: number;
+  }>;
 };

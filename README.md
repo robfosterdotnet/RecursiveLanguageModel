@@ -423,7 +423,8 @@ All answers include bracketed citations linking claims to source chunks:
 |-----------|---------|------------|-------------|
 | `chunkSize` | 1800 | Retrieval, RLM, RLM + Graph | Characters per chunk |
 | `topK` | 8 | Retrieval | Chunks for retrieval mode |
-| `maxSubcalls` | 24 | RLM, RLM + Graph | Maximum chunks to analyze in RLM modes |
+| `maxSubcalls` | 24 | RLM, RLM + Graph | Maximum chunks to analyze in RLM modes (ignored when comprehensiveMode is enabled) |
+| `comprehensiveMode` | false | RLM, RLM + Graph | Process ALL chunks and include ALL findings for complete coverage (higher cost but ensures nothing is missed) |
 | `concurrency` | 6 | RLM, RLM + Graph | Parallel sub-calls |
 
 ## Architecture
@@ -563,6 +564,41 @@ RLM and RLM + Graph modes make multiple LLM calls. Cost scales with:
 - Reduce `maxSubcalls` for exploratory questions
 - Use Retrieval mode when you know the answer is localized
 - Use standard RLM mode instead of RLM + Graph if you don't need relationship mapping
+
+## Comprehensive Mode
+
+By default, RLM modes use two mechanisms to limit cost:
+
+1. **maxSubcalls limit**: Only the first N chunks are analyzed (default: 24)
+2. **Relevance filtering**: Chunks marked as "not relevant" by the sub-model are excluded from the root aggregation
+
+This optimization works well for most queries but can cause issues when:
+- Important information is in chunks beyond the maxSubcalls limit
+- The sub-model incorrectly marks relevant chunks as "not relevant"
+- You need guaranteed complete coverage of the entire document
+
+**Comprehensive Mode** addresses these issues by:
+- Processing **ALL** chunks regardless of the maxSubcalls setting
+- Including **ALL** findings in the root aggregation, even those marked as not relevant
+
+### When to Use Comprehensive Mode
+
+Enable comprehensive mode when:
+- You're getting incomplete answers that say "Article X is required but not included in provided snippets"
+- You need guaranteed complete coverage (legal review, compliance audits)
+- Document completeness is more important than cost
+- You're analyzing contracts with critical clauses that might be in later sections
+
+**Trade-off**: Comprehensive mode increases cost proportionally to document size. A 100-chunk document will cost ~4x more than the default 24-chunk limit.
+
+### Example Scenario
+
+**Problem**: Analyzing a 50-page M&A contract with the question "Summarize all conditions precedent". The system responds: "Article 9 (Sections 9.1-9.3) is required but not included in the provided snippet."
+
+**Solution**: Enable Comprehensive Mode
+- The system will process all 50+ chunks instead of stopping at 24
+- All chunks will be included in the aggregation, ensuring Article 9 is covered
+- You'll get a complete answer with all conditions precedent
 
 ## Theoretical Background
 

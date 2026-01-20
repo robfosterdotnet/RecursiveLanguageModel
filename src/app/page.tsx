@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import type { AnalyzeMode, AnalyzeResponse, KnowledgeGraph } from "@/lib/types";
+import type { AnalyzeMode, AnalyzeResponse, KnowledgeGraph } from "@/lib/analysis/types";
 
 type WorkflowStep = "documents" | "configure" | "results";
 
@@ -241,6 +241,7 @@ export default function Home() {
   const [chunkSize, setChunkSize] = useState(1800);
   const [topK, setTopK] = useState(8);
   const [maxSubcalls, setMaxSubcalls] = useState(24);
+  const [comprehensiveMode, setComprehensiveMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -376,7 +377,7 @@ export default function Home() {
           documents,
           question,
           mode,
-          options: { chunkSize, topK, maxSubcalls },
+          options: { chunkSize, topK, maxSubcalls, comprehensiveMode },
         }),
       });
 
@@ -769,8 +770,31 @@ export default function Home() {
                             min={2}
                             max={120}
                             className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
+                            disabled={comprehensiveMode}
                           />
-                          <p className="text-xs text-muted-foreground">Max chunks to analyze</p>
+                          <p className="text-xs text-muted-foreground">
+                            {comprehensiveMode ? "Processing ALL chunks" : "Max chunks to analyze"}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Comprehensive mode - used by rlm and rlm-graph */}
+                      {(mode === "rlm" || mode === "rlm-graph") && (
+                        <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
+                          <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={comprehensiveMode}
+                              onChange={(e) => setComprehensiveMode(e.target.checked)}
+                              className="h-4 w-4 rounded border-border/50 text-primary focus:ring-2 focus:ring-primary/20"
+                            />
+                            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                              Comprehensive Mode
+                            </span>
+                          </label>
+                          <p className="text-xs text-muted-foreground">
+                            Process ALL chunks and include ALL findings for complete coverage (higher cost)
+                          </p>
                         </div>
                       )}
                     </div>

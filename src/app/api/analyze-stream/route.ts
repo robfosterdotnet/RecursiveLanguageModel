@@ -1,6 +1,9 @@
 import { chatCompletion } from "@/lib/azure";
 import { buildChunks } from "@/lib/chunking";
+import { buildGraph, summarizeGraph } from "@/lib/graph";
 import {
+  GRAPH_ROOT_PROMPT,
+  GRAPH_SUB_PROMPT,
   RETRIEVAL_PROMPT,
   REWRITE_PROMPT,
   ROOT_PROMPT,
@@ -12,6 +15,10 @@ import type {
   AnalyzeResponse,
   Chunk,
   DocumentInput,
+  EntityExtraction,
+  EntityType,
+  KnowledgeGraph,
+  RelationType,
   SubFinding,
 } from "@/lib/types";
 
@@ -75,6 +82,93 @@ const parseSubFinding = (text: string, chunk: Chunk): SubFinding => {
       chunkId: chunk.id,
       docId: chunk.docId,
     };
+  }
+};
+
+type GraphSubResult = {
+  finding: SubFinding;
+  extraction: EntityExtraction;
+};
+
+const VALID_ENTITY_TYPES: EntityType[] = [
+  "party", "date", "amount", "clause", "obligation",
+  "right", "condition", "document", "section",
+];
+
+const VALID_RELATION_TYPES: RelationType[] = [
+  "has_obligation", "has_right", "references", "depends_on",
+  "effective_on", "expires_on", "involves_amount", "defined_in", "related_to",
+];
+
+const parseGraphSubResult = (text: string, chunk: Chunk): GraphSubResult => {
+  const json = extractJson(text);
+  const emptyResult: GraphSubResult = {
+    finding: {
+      relevant: false,
+      summary: "",
+      citations: [],
+      chunkId: chunk.id,
+      docId: chunk.docId,
+    },
+    extraction: {
+      entities: [],
+      relationships: [],
+    },
+  };
+
+  if (!json) {
+    return emptyResult;
+  }
+
+  try {
+    const parsed = JSON.parse(json);
+
+    // Parse finding
+    const findingData = parsed.finding ?? parsed;
+    const citations =
+      findingData.citations && findingData.citations.length > 0
+        ? findingData.citations
+        : [chunk.id];
+    const finding: SubFinding = {
+      relevant: Boolean(findingData.relevant),
+      summary: findingData.summary ?? "",
+      citations,
+      chunkId: chunk.id,
+      docId: chunk.docId,
+    };
+
+    // Parse extraction
+    const extractionData = parsed.extraction ?? { entities: [], relationships: [] };
+    const entities = (extractionData.entities ?? [])
+      .filter((e: { type?: string; name?: string }) =>
+        e.type && e.name && VALID_ENTITY_TYPES.includes(e.type as EntityType)
+      )
+      .map((e: { type: EntityType; name: string; properties?: Record<string, unknown>; confidence?: number }) => ({
+        type: e.type as EntityType,
+        name: String(e.name),
+        properties: e.properties ?? {},
+        confidence: typeof e.confidence === "number" ? e.confidence : 0.8,
+      }));
+
+    const relationships = (extractionData.relationships ?? [])
+      .filter((r: { type?: string; sourceName?: string; targetName?: string }) =>
+        r.type && r.sourceName && r.targetName &&
+        VALID_RELATION_TYPES.includes(r.type as RelationType)
+      )
+      .map((r: { type: RelationType; sourceName: string; targetName: string; properties?: Record<string, unknown>; confidence?: number }) => ({
+        type: r.type as RelationType,
+        sourceName: String(r.sourceName),
+        targetName: String(r.targetName),
+        properties: r.properties ?? {},
+        confidence: typeof r.confidence === "number" ? r.confidence : 0.8,
+      }));
+
+    return {
+      finding,
+      extraction: { entities, relationships },
+    };
+  } catch {
+    return emptyResult;
   }
 };
 
@@ -257,7 +351,7 @@ export async function POST(request: Request) {
               },
             },
           });
-        } else {
+        } else if (mode === "rlm") {
           // RLM mode
           log("Chunking documents...", "info");
           const chunks = buildChunks(documents, { chunkSize: options.chunkSize });
@@ -355,6 +449,140 @@ export async function POST(request: Request) {
                 chunksTotal: chunks.length,
                 chunksUsed: maxSubcalls,
                 subcalls: maxSubcalls,
+                mode,
+              },
+            },
+          });
+        } else if (mode === "rlm-graph") {
+          // RLM + Graph mode
+          log("Chunking documents...", "info");
+          const chunks = buildChunks(documents, { chunkSize: options.chunkSize });
+          log(`Created ${chunks.length} chunks`, "success");
+
+          const maxSubcalls = Math.min(options.maxSubcalls, chunks.length);
+          const concurrency = options.concurrency ?? 6;
+          const findings: SubFinding[] = [];
+          const extractions: Array<{ chunkId: string; extraction: EntityExtraction }> = [];
+          let usage = undefined as AnalyzeResponse["usage"];
+
+          log(`Starting RLM + Graph analysis (${maxSubcalls} chunks, ${concurrency} concurrent)...`, "info");
+
+          const chunksToProcess = chunks.slice(0, maxSubcalls);
+          let completed = 0;
+
+          // Process chunks in parallel batches with entity extraction
+          for (let batchStart = 0; batchStart < chunksToProcess.length; batchStart += concurrency) {
+            const batch = chunksToProcess.slice(batchStart, batchStart + concurrency);
+            const batchNum = Math.floor(batchStart / concurrency) + 1;
+            const totalBatches = Math.ceil(chunksToProcess.length / concurrency);
+
+            log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} chunks)...`, "dim");
+
+            const batchPromises = batch.map(async (chunk) => {
+              const subResult = await chatCompletion({
+                deployment: subDeployment ?? rootDeployment,
+                messages: [
+                  { role: "system", content: GRAPH_SUB_PROMPT },
+                  {
+                    role: "user",
+                    content: `Chunk ID: ${chunk.id}\nQuestion: ${question}\nSnippet:\n${chunk.text}`,
+                  },
+                ],
+                temperature: getSubcallTemperature(subDeployment ?? rootDeployment),
+              });
+
+              return { chunk, subResult };
+            });
+
+            const batchResults = await Promise.all(batchPromises);
+
+            for (const { chunk, subResult } of batchResults) {
+              completed += 1;
+              usage = addUsage(usage, subResult.usage);
+              const graphResult = parseGraphSubResult(subResult.content, chunk);
+
+              if (graphResult.finding.relevant) {
+                findings.push(graphResult.finding);
+                log(`  ✓ Found relevant content in ${chunk.id}`, "success");
+              }
+
+              // Always collect extractions even if finding not relevant
+              if (graphResult.extraction.entities.length > 0 || graphResult.extraction.relationships.length > 0) {
+                extractions.push({
+                  chunkId: chunk.id,
+                  extraction: graphResult.extraction,
+                });
+                log(`  📊 Extracted ${graphResult.extraction.entities.length} entities, ${graphResult.extraction.relationships.length} relationships from ${chunk.id}`, "dim");
+              }
+            }
+
+            log(`Completed ${completed}/${maxSubcalls} chunks`, "dim");
+          }
+
+          log(`Extracted ${findings.length} relevant findings`, "success");
+
+          // Build knowledge graph
+          log("Building knowledge graph...", "info");
+          const graph: KnowledgeGraph = buildGraph(
+            extractions,
+            documents.length,
+            subDeployment ?? rootDeployment,
+          );
+          log(`Graph built: ${graph.nodes.length} nodes, ${graph.edges.length} edges`, "success");
+
+          // Send graph as separate event
+          send({
+            type: "graph",
+            data: graph,
+          });
+
+          // Create graph summary for root prompt
+          const graphSummary = summarizeGraph(graph);
+
+          const findingsText =
+            findings.length > 0
+              ? findings
+                  .map(
+                    (finding) =>
+                      `- ${finding.summary} (citations: ${finding.citations.join(", ")})`,
+                  )
+                  .join("\n")
+              : "No relevant findings were extracted.";
+
+          log("Aggregating findings with graph-aware root model...", "info");
+          const rootResult = await chatCompletion({
+            deployment: rootDeployment,
+            messages: [
+              { role: "system", content: GRAPH_ROOT_PROMPT },
+              {
+                role: "user",
+                content: `Question:\n${question}\n\n${graphSummary}\n\nFindings:\n${findingsText}`,
+              },
+            ],
+            temperature: 0.2,
+          });
+
+          usage = addUsage(usage, rootResult.usage);
+          log("Aggregation complete", "success");
+
+          const rewritten = await rewriteAnswer(rootResult.content, question, rootDeployment, log);
+          usage = addUsage(usage, rewritten.usage ?? undefined);
+
+          log("Analysis complete!", "success");
+
+          send({
+            type: "result",
+            data: {
+              mode,
+              answer: rewritten.content || rootResult.content,
+              usage,
+              graph,
+              debug: {
+                chunksTotal: chunks.length,
+                chunksUsed: maxSubcalls,
+                subcalls: maxSubcalls,
+                graphNodes: graph.nodes.length,
+                graphEdges: graph.edges.length,
                 mode,
               },
             },

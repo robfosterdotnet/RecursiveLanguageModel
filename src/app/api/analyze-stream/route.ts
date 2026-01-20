@@ -366,17 +366,12 @@ export async function POST(request: Request) {
           );
 
           const chunksToProcess = chunks.slice(0, maxSubcalls);
-          let inFlightCount = 0;
 
           // Process chunks with optimized worker pool
-          // Unlike batch processing, pool keeps exactly `concurrency` requests in flight
-          // at all times, starting a new request immediately when any completes.
+          // Creates N independent workers that pull from a shared queue
           const poolResults = await processWithPool(
             chunksToProcess,
             async (chunk, index) => {
-              inFlightCount += 1;
-              log(`Starting ${chunk.id} (${inFlightCount} in flight)`, "dim");
-
               const subResult = await chatCompletion({
                 deployment: subDeployment ?? rootDeployment,
                 messages: [
@@ -388,12 +383,13 @@ export async function POST(request: Request) {
                 ],
                 temperature: getSubcallTemperature(subDeployment ?? rootDeployment),
               });
-
-              inFlightCount -= 1;
               return subResult;
             },
             {
               concurrency,
+              onStart: (index, total) => {
+                log(`Starting chunk ${index + 1}/${total}`, "dim");
+              },
               onProgress: (completed, total) => {
                 log(`Completed ${completed}/${total} chunks`, "dim");
               },
@@ -480,17 +476,12 @@ export async function POST(request: Request) {
           );
 
           const chunksToProcess = chunks.slice(0, maxSubcalls);
-          let inFlightCount = 0;
 
           // Process chunks with optimized worker pool
-          // Unlike batch processing, pool keeps exactly `concurrency` requests in flight
-          // at all times, starting a new request immediately when any completes.
+          // Creates N independent workers that pull from a shared queue
           const poolResults = await processWithPool(
             chunksToProcess,
             async (chunk, index) => {
-              inFlightCount += 1;
-              log(`Starting ${chunk.id} (${inFlightCount} in flight)`, "dim");
-
               const subResult = await chatCompletion({
                 deployment: subDeployment ?? rootDeployment,
                 messages: [
@@ -502,12 +493,13 @@ export async function POST(request: Request) {
                 ],
                 temperature: getSubcallTemperature(subDeployment ?? rootDeployment),
               });
-
-              inFlightCount -= 1;
               return subResult;
             },
             {
               concurrency,
+              onStart: (index, total) => {
+                log(`Starting chunk ${index + 1}/${total}`, "dim");
+              },
               onProgress: (completed, total) => {
                 log(`Completed ${completed}/${total} chunks`, "dim");
               },

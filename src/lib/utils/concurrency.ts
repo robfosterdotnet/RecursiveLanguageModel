@@ -1,10 +1,5 @@
 /**
  * Concurrency utilities for parallel processing with controlled throughput.
- *
- * The pool pattern keeps a constant number of tasks in flight at all times,
- * immediately starting a new task as soon as one completes. This is more
- * efficient than batch processing which waits for all tasks in a batch
- * to complete before starting the next batch.
  */
 
 export type PoolResult<T, R> = {
@@ -16,16 +11,16 @@ export type PoolResult<T, R> = {
 export type PoolOptions = {
   concurrency: number;
   onProgress?: (completed: number, total: number) => void;
+  onStart?: (index: number, total: number) => void;
 };
 
 /**
- * Process items with a concurrent worker pool using Promise.race pattern.
+ * Process items with a concurrent worker pool using a semaphore pattern.
  *
- * This implementation uses a proven pattern that guarantees true parallelism:
- * 1. Start `concurrency` promises immediately
- * 2. Use Promise.race to detect when ANY promise completes
- * 3. Immediately start the next item when one completes
- * 4. Always maintain exactly `concurrency` promises in flight
+ * This implementation uses a simple and robust approach:
+ * 1. Create N worker "slots" that run independently
+ * 2. Each worker pulls the next item from a shared queue
+ * 3. Workers run until the queue is empty
  *
  * @example
  * ```typescript
@@ -44,63 +39,58 @@ export async function processWithPool<T, R>(
   processor: (item: T, index: number) => Promise<R>,
   options: PoolOptions
 ): Promise<PoolResult<T, R>[]> {
-  const { concurrency, onProgress } = options;
+  const { concurrency, onProgress, onStart } = options;
   const results: PoolResult<T, R>[] = [];
 
   if (items.length === 0) {
     return results;
   }
 
-  // Track in-flight promises with their indices
-  const inFlight = new Map<
-    Promise<{ index: number; result: R }>,
-    number
-  >();
-
+  // Shared state for workers
   let nextIndex = 0;
   let completed = 0;
+  const totalItems = items.length;
 
-  // Helper to start processing an item
-  const startNext = (): void => {
-    if (nextIndex >= items.length) return;
+  // Worker function - each worker independently pulls from the queue
+  const worker = async (): Promise<void> => {
+    while (true) {
+      // Atomically get the next index
+      const currentIndex = nextIndex;
+      if (currentIndex >= totalItems) {
+        break; // No more work
+      }
+      nextIndex += 1;
 
-    const currentIndex = nextIndex;
-    nextIndex += 1;
+      // Notify start
+      if (onStart) {
+        onStart(currentIndex, totalItems);
+      }
 
-    const promise = processor(items[currentIndex], currentIndex).then(
-      (result) => ({ index: currentIndex, result })
-    );
+      // Process the item
+      const item = items[currentIndex];
+      const result = await processor(item, currentIndex);
 
-    inFlight.set(promise, currentIndex);
+      // Store result
+      results.push({ item, result, index: currentIndex });
+
+      // Update progress
+      completed += 1;
+      if (onProgress) {
+        onProgress(completed, totalItems);
+      }
+    }
   };
 
-  // Start initial batch of concurrent requests
-  const initialBatch = Math.min(concurrency, items.length);
-  for (let i = 0; i < initialBatch; i++) {
-    startNext();
+  // Start N workers in parallel
+  const numWorkers = Math.min(concurrency, items.length);
+  const workers: Promise<void>[] = [];
+
+  for (let i = 0; i < numWorkers; i++) {
+    workers.push(worker());
   }
 
-  // Process until all items are done
-  while (inFlight.size > 0) {
-    // Wait for ANY promise to complete
-    const completedPromise = await Promise.race(inFlight.keys());
-    const { index, result } = await completedPromise;
-
-    // Remove from in-flight tracking
-    inFlight.delete(completedPromise);
-
-    // Store result
-    results.push({ item: items[index], result, index });
-    completed += 1;
-
-    // Report progress
-    if (onProgress) {
-      onProgress(completed, items.length);
-    }
-
-    // Start next item if any remain
-    startNext();
-  }
+  // Wait for all workers to complete
+  await Promise.all(workers);
 
   // Sort results by original index to maintain order
   results.sort((a, b) => a.index - b.index);
@@ -110,21 +100,11 @@ export async function processWithPool<T, R>(
 
 /**
  * Process items with a concurrent pool, yielding results as they complete.
- *
- * This is useful for streaming scenarios where you want to process
- * results as soon as they're available rather than waiting for all to complete.
- *
- * @example
- * ```typescript
- * for await (const { item, result } of streamWithPool(chunks, processChunk, { concurrency: 6 })) {
- *   console.log(`Processed: ${item.id}`);
- * }
- * ```
  */
 export async function* streamWithPool<T, R>(
   items: T[],
   processor: (item: T, index: number) => Promise<R>,
-  options: Omit<PoolOptions, "onProgress">
+  options: Omit<PoolOptions, "onProgress" | "onStart">
 ): AsyncGenerator<PoolResult<T, R>> {
   const { concurrency } = options;
 
@@ -132,73 +112,63 @@ export async function* streamWithPool<T, R>(
     return;
   }
 
-  // Track in-flight promises with their indices
-  const inFlight = new Map<
-    Promise<{ index: number; result: R }>,
-    number
-  >();
+  // Use a queue to collect results
+  const resultQueue: PoolResult<T, R>[] = [];
+  let resolveWaiting: (() => void) | null = null;
+  let allDone = false;
 
+  // Shared state for workers
   let nextIndex = 0;
+  let completed = 0;
+  const totalItems = items.length;
 
-  // Helper to start processing an item
-  const startNext = (): void => {
-    if (nextIndex >= items.length) return;
-
-    const currentIndex = nextIndex;
-    nextIndex += 1;
-
-    const promise = processor(items[currentIndex], currentIndex).then(
-      (result) => ({ index: currentIndex, result })
-    );
-
-    inFlight.set(promise, currentIndex);
+  const pushResult = (result: PoolResult<T, R>) => {
+    resultQueue.push(result);
+    if (resolveWaiting) {
+      const resolve = resolveWaiting;
+      resolveWaiting = null;
+      resolve();
+    }
   };
 
-  // Start initial batch of concurrent requests
-  const initialBatch = Math.min(concurrency, items.length);
-  for (let i = 0; i < initialBatch; i++) {
-    startNext();
-  }
+  // Worker function
+  const worker = async (): Promise<void> => {
+    while (true) {
+      const currentIndex = nextIndex;
+      if (currentIndex >= totalItems) {
+        break;
+      }
+      nextIndex += 1;
 
-  // Process until all items are done
-  while (inFlight.size > 0) {
-    // Wait for ANY promise to complete
-    const completedPromise = await Promise.race(inFlight.keys());
-    const { index, result } = await completedPromise;
+      const item = items[currentIndex];
+      const result = await processor(item, currentIndex);
 
-    // Remove from in-flight tracking
-    inFlight.delete(completedPromise);
-
-    // Yield result immediately
-    yield { item: items[index], result, index };
-
-    // Start next item if any remain
-    startNext();
-  }
-}
-
-/**
- * Measure the performance improvement of pool vs batch processing.
- * Useful for benchmarking and logging.
- */
-export function estimatePoolSpeedup(
-  itemCount: number,
-  concurrency: number,
-  avgTimeMs: number,
-  timeVarianceMs: number
-): { batchTimeMs: number; poolTimeMs: number; speedup: string } {
-  // Batch: ceil(items/concurrency) batches, each takes max time in batch
-  const batchCount = Math.ceil(itemCount / concurrency);
-  const batchTimeMs = batchCount * (avgTimeMs + timeVarianceMs);
-
-  // Pool: total work / concurrency (no waiting for slow items)
-  const poolTimeMs = (itemCount * avgTimeMs) / concurrency;
-
-  const speedup = ((batchTimeMs - poolTimeMs) / batchTimeMs) * 100;
-
-  return {
-    batchTimeMs,
-    poolTimeMs,
-    speedup: `${speedup.toFixed(0)}% faster`,
+      completed += 1;
+      pushResult({ item, result, index: currentIndex });
+    }
   };
+
+  // Start workers
+  const numWorkers = Math.min(concurrency, items.length);
+  const workersPromise = Promise.all(
+    Array.from({ length: numWorkers }, () => worker())
+  ).then(() => {
+    allDone = true;
+    if (resolveWaiting) {
+      resolveWaiting();
+    }
+  });
+
+  // Yield results as they come in
+  while (!allDone || resultQueue.length > 0) {
+    if (resultQueue.length > 0) {
+      yield resultQueue.shift()!;
+    } else if (!allDone) {
+      await new Promise<void>((resolve) => {
+        resolveWaiting = resolve;
+      });
+    }
+  }
+
+  await workersPromise;
 }

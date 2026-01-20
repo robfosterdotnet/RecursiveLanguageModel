@@ -22,6 +22,7 @@ import type {
   SubFinding,
 } from "@/lib/analysis/types";
 import { chatCompletion } from "@/lib/llm/azure";
+import { processWithPool } from "@/lib/utils/concurrency";
 
 export const runtime = "nodejs";
 
@@ -365,17 +366,14 @@ export async function POST(request: Request) {
           );
 
           const chunksToProcess = chunks.slice(0, maxSubcalls);
-          let completed = 0;
 
-          // Process chunks in parallel batches
-          for (let batchStart = 0; batchStart < chunksToProcess.length; batchStart += concurrency) {
-            const batch = chunksToProcess.slice(batchStart, batchStart + concurrency);
-            const batchNum = Math.floor(batchStart / concurrency) + 1;
-            const totalBatches = Math.ceil(chunksToProcess.length / concurrency);
-
-            log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} chunks)...`, "dim");
-
-            const batchPromises = batch.map(async (chunk) => {
+          // Process chunks with optimized worker pool
+          // Unlike batch processing, pool keeps exactly `concurrency` requests in flight
+          // at all times, starting a new request immediately when any completes.
+          // This can be 30-50% faster when request times vary.
+          const poolResults = await processWithPool(
+            chunksToProcess,
+            async (chunk) => {
               const subResult = await chatCompletion({
                 deployment: subDeployment ?? rootDeployment,
                 messages: [
@@ -387,25 +385,26 @@ export async function POST(request: Request) {
                 ],
                 temperature: getSubcallTemperature(subDeployment ?? rootDeployment),
               });
-
-              return { chunk, subResult };
-            });
-
-            const batchResults = await Promise.all(batchPromises);
-
-            for (const { chunk, subResult } of batchResults) {
-              completed += 1;
-              usage = addUsage(usage, subResult.usage);
-              const finding = parseSubFinding(subResult.content, chunk);
-
-              // In comprehensive mode, include ALL findings (even if marked as not relevant)
-              if (options.comprehensiveMode || finding.relevant) {
-                findings.push(finding);
-                log(`  ✓ Found ${finding.relevant ? "relevant" : "additional"} content in ${chunk.id}`, "success");
-              }
+              return subResult;
+            },
+            {
+              concurrency,
+              onProgress: (completed, total) => {
+                log(`Completed ${completed}/${total} chunks`, "dim");
+              },
             }
+          );
 
-            log(`Completed ${completed}/${maxSubcalls} chunks`, "dim");
+          // Process results
+          for (const { item: chunk, result: subResult } of poolResults) {
+            usage = addUsage(usage, subResult.usage);
+            const finding = parseSubFinding(subResult.content, chunk);
+
+            // In comprehensive mode, include ALL findings (even if marked as not relevant)
+            if (options.comprehensiveMode || finding.relevant) {
+              findings.push(finding);
+              log(`  ✓ Found ${finding.relevant ? "relevant" : "additional"} content in ${chunk.id}`, "success");
+            }
           }
 
           log(`Extracted ${findings.length} relevant findings`, "success");
@@ -476,17 +475,13 @@ export async function POST(request: Request) {
           );
 
           const chunksToProcess = chunks.slice(0, maxSubcalls);
-          let completed = 0;
 
-          // Process chunks in parallel batches with entity extraction
-          for (let batchStart = 0; batchStart < chunksToProcess.length; batchStart += concurrency) {
-            const batch = chunksToProcess.slice(batchStart, batchStart + concurrency);
-            const batchNum = Math.floor(batchStart / concurrency) + 1;
-            const totalBatches = Math.ceil(chunksToProcess.length / concurrency);
-
-            log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} chunks)...`, "dim");
-
-            const batchPromises = batch.map(async (chunk) => {
+          // Process chunks with optimized worker pool
+          // Unlike batch processing, pool keeps exactly `concurrency` requests in flight
+          // at all times, starting a new request immediately when any completes.
+          const poolResults = await processWithPool(
+            chunksToProcess,
+            async (chunk) => {
               const subResult = await chatCompletion({
                 deployment: subDeployment ?? rootDeployment,
                 messages: [
@@ -498,37 +493,38 @@ export async function POST(request: Request) {
                 ],
                 temperature: getSubcallTemperature(subDeployment ?? rootDeployment),
               });
+              return subResult;
+            },
+            {
+              concurrency,
+              onProgress: (completed, total) => {
+                log(`Completed ${completed}/${total} chunks`, "dim");
+              },
+            }
+          );
 
-              return { chunk, subResult };
-            });
+          // Process results
+          for (const { item: chunk, result: subResult } of poolResults) {
+            usage = addUsage(usage, subResult.usage);
+            const graphResult = parseGraphSubResult(subResult.content, chunk);
 
-            const batchResults = await Promise.all(batchPromises);
-
-            for (const { chunk, subResult } of batchResults) {
-              completed += 1;
-              usage = addUsage(usage, subResult.usage);
-              const graphResult = parseGraphSubResult(subResult.content, chunk);
-
-              // In comprehensive mode, include ALL findings (even if marked as not relevant)
-              if (options.comprehensiveMode || graphResult.finding.relevant) {
-                findings.push(graphResult.finding);
-                log(
-                  `  ✓ Found ${graphResult.finding.relevant ? "relevant" : "additional"} content in ${chunk.id}`,
-                  "success"
-                );
-              }
-
-              // Always collect extractions even if finding not relevant
-              if (graphResult.extraction.entities.length > 0 || graphResult.extraction.relationships.length > 0) {
-                extractions.push({
-                  chunkId: chunk.id,
-                  extraction: graphResult.extraction,
-                });
-                log(`  📊 Extracted ${graphResult.extraction.entities.length} entities, ${graphResult.extraction.relationships.length} relationships from ${chunk.id}`, "dim");
-              }
+            // In comprehensive mode, include ALL findings (even if marked as not relevant)
+            if (options.comprehensiveMode || graphResult.finding.relevant) {
+              findings.push(graphResult.finding);
+              log(
+                `  ✓ Found ${graphResult.finding.relevant ? "relevant" : "additional"} content in ${chunk.id}`,
+                "success"
+              );
             }
 
-            log(`Completed ${completed}/${maxSubcalls} chunks`, "dim");
+            // Always collect extractions even if finding not relevant
+            if (graphResult.extraction.entities.length > 0 || graphResult.extraction.relationships.length > 0) {
+              extractions.push({
+                chunkId: chunk.id,
+                extraction: graphResult.extraction,
+              });
+              log(`  📊 Extracted ${graphResult.extraction.entities.length} entities, ${graphResult.extraction.relationships.length} relationships from ${chunk.id}`, "dim");
+            }
           }
 
           log(`Extracted ${findings.length} relevant findings`, "success");

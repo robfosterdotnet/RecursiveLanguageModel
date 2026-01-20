@@ -241,6 +241,7 @@ export default function Home() {
   const [chunkSize, setChunkSize] = useState(1800);
   const [topK, setTopK] = useState(8);
   const [maxSubcalls, setMaxSubcalls] = useState(24);
+  const [concurrency, setConcurrency] = useState(6);
   const [comprehensiveMode, setComprehensiveMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
@@ -377,7 +378,7 @@ export default function Home() {
           documents,
           question,
           mode,
-          options: { chunkSize, topK, maxSubcalls, comprehensiveMode },
+          options: { chunkSize, topK, maxSubcalls, concurrency, comprehensiveMode },
         }),
       });
 
@@ -794,6 +795,26 @@ export default function Home() {
                           </label>
                           <p className="text-xs text-muted-foreground">
                             Process ALL chunks and include ALL findings for complete coverage (higher cost)
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Concurrency - used by rlm and rlm-graph */}
+                      {(mode === "rlm" || mode === "rlm-graph") && (
+                        <div className="space-y-2 rounded-xl border border-border/40 bg-white/40 p-4">
+                          <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Concurrency
+                          </label>
+                          <Input
+                            type="number"
+                            value={concurrency}
+                            onChange={(e) => setConcurrency(Number(e.target.value))}
+                            min={1}
+                            max={20}
+                            className="rounded-lg border-border/50 bg-white/70 font-mono text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Parallel requests (higher = faster but more API load)
                           </p>
                         </div>
                       )}
